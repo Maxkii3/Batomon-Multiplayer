@@ -1,0 +1,8 @@
+# Release files are attached to GitHub Releases, not committed
+*.cmd
+*.zip
+# OS / editor noise
+Thumbs.db
+.DS_Store
+.vscode/
+.godot/
