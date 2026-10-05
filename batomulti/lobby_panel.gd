@@ -12,6 +12,9 @@ extends PanelContainer
 ## Lobby panel (doc/architecture.md §6). Opened from the main menu's "Multiplayer" button as a
 ## centred modal, or with F1 during a match. Create a room (host settings) or join by code,
 ## member list, Start (host), Leave, Return to main menu (ends the lobby run), Close.
+## Room sidebar (2026-10-06): everyone in the room with a Player / Spectator role button. A member
+## switches only its own role; the host may switch anyone (the host checks it again). Spectators never
+## play: they watch the whole match from round 1.
 
 const RoomCode := preload("res://batomulti/room_code.gd")
 const COL_DIM := Color(0.62, 0.62, 0.70)
@@ -19,6 +22,8 @@ const SPEEDS := [1.0, 2.0, 4.0]   # host battle speed choices (every client play
 const COL_TEXT := Color(0.96, 0.96, 0.96)
 const COL_ACCENT := Color(1.0, 0.85, 0.4)
 const COL_BAD := Color(1.0, 0.40, 0.35)
+const COL_SPEC := Color(0.55, 0.80, 1.0)
+const SIDE_W := 128.0
 
 var hub                      # batomulti.gd autoload
 var font: Font
@@ -41,6 +46,10 @@ var _menu_btn: Button
 var _rejoin_btn: Button
 var _close_btn: Button
 var _guard_actions := {}
+var _side_title: Label
+var _roster: VBoxContainer
+var _roster_sig := ""
+var role_buttons: Dictionary = {}   # seat id -> its role Button (tests / autopilot press the real button)
 
 
 func setup(p_hub, p_font: Font, p_size: int) -> void:
@@ -54,9 +63,22 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	bg.set_content_margin_all(8)
 	add_theme_stylebox_override("panel", bg)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	var root := HBoxContainer.new()
+	root.add_theme_constant_override("separation", 6)
+	add_child(root)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 3)
-	add_child(vb)
+	root.add_child(vb)
+	root.add_child(VSeparator.new())
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 2)
+	side.custom_minimum_size = Vector2(SIDE_W, 0)
+	root.add_child(side)
+	_side_title = _label("In this room", COL_ACCENT)
+	side.add_child(_side_title)
+	_roster = VBoxContainer.new()
+	_roster.add_theme_constant_override("separation", 1)
+	side.add_child(_roster)
 	var head := HBoxContainer.new()
 	_title = _label("Multiplayer", COL_ACCENT)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -176,7 +198,7 @@ func refresh() -> void:
 	_create_btn.disabled = not can_enter
 	_join_btn.disabled = not can_enter
 	_join_edit.editable = can_enter
-	_start_btn.disabled = not (is_host and lobby and hub.client.state.seats.size() >= 2)
+	_start_btn.disabled = not (is_host and lobby and hub.client.state.players().size() >= 2)
 	_leave_btn.disabled = not in_room
 	_menu_btn.visible = hub.lobby_run_live() or (hub.client != null and hub.client.is_spectating())
 	_rejoin_btn.visible = t != null and not in_room and not hub.active_match().is_empty()
@@ -189,16 +211,70 @@ func refresh() -> void:
 		if i >= 0 and _speed.selected != i:
 			_speed.select(i)                  # guests see the host's choice
 	var names: PackedStringArray = []
+	var specs: PackedStringArray = []
 	if hub.client != null:
 		for seat in hub.client.state.seats.values():
-			names.append(str(seat.name) + (" (host)" if t != null and int(seat.id) == t.host_id() else ""))
-	_members.text = "Players: " + (", ".join(names) if not names.is_empty() else "-")
+			var nm := str(seat.name) + (" (host)" if t != null and int(seat.id) == t.host_id() else "")
+			if str(seat.get("role", "player")) == "spectator":
+				specs.append(nm)
+			else:
+				names.append(nm)
+	_members.text = "Players: " + (", ".join(names) if not names.is_empty() else "-") + \
+		("  ·  Spectators: " + ", ".join(specs) if not specs.is_empty() else "")
+	_refresh_roster(in_room, is_host, lobby)
 	if t == null:
 		set_status("Steam is not running. Multiplayer needs the Steam version of the game with Steam open.", true)
 	elif hub.save_blocked != "" and not in_room:
 		set_status(hub.save_blocked, not hub.save_blocked.begins_with("Checking"))
 	elif not in_room and not on_menu and not hub.lobby_run_live():
 		set_status("Open Multiplayer from the main menu to create or join a room.")
+
+
+## The room sidebar: one row per seat (name, host / you tags, role button). Rebuilt only when
+## something on it changed. The role button is live for my own seat, and for every seat when I am the
+## host, and only while the room is in the lobby.
+func _refresh_roster(in_room: bool, is_host: bool, lobby: bool) -> void:
+	var t = hub.transport
+	var me: int = t.self_id if t != null else 0
+	var seats: Array = hub.client.state.seats.values() if in_room and hub.client != null else []
+	var sig := "%s|%s|%s" % [in_room, is_host, lobby]
+	for seat in seats:
+		sig += "|%d:%s:%s:%s" % [int(seat.id), str(seat.name), str(seat.get("role", "player")), int(seat.id) == t.host_id()]
+	if sig == _roster_sig:
+		return
+	_roster_sig = sig
+	for c in _roster.get_children():
+		_roster.remove_child(c)
+		c.queue_free()
+	role_buttons.clear()
+	var np := 0
+	for seat in seats:
+		if str(seat.get("role", "player")) != "spectator":
+			np += 1
+	_side_title.text = "In this room: %d player%s, %d spectator%s" % [np, "" if np == 1 else "s", seats.size() - np, "" if seats.size() - np == 1 else "s"] if in_room else "In this room"
+	_side_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_side_title.custom_minimum_size = Vector2(SIDE_W, 0)
+	if seats.is_empty():
+		_roster.add_child(_label("Create or join a room.", COL_DIM))
+		return
+	for seat in seats:
+		var id := int(seat.id)
+		var spec: bool = str(seat.get("role", "player")) == "spectator"
+		var row := HBoxContainer.new()
+		var nm := _label(str(seat.name) + (" (host)" if id == t.host_id() else "") + (" (you)" if id == me else ""), COL_SPEC if spec else COL_TEXT)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.clip_text = true
+		nm.custom_minimum_size = Vector2(SIDE_W - 52, 0)
+		row.add_child(nm)
+		var can: bool = lobby and (id == me or is_host)
+		var b := _button("Spectator" if spec else "Player", func(): hub.set_role(id, "player" if spec else "spectator"))
+		b.custom_minimum_size = Vector2(50, 0)
+		b.disabled = not can
+		b.tooltip_text = ("Switch to " + ("Player" if spec else "Spectator")) if can else (
+			"Only the host can change another player's role." if lobby else "Roles are locked once the match starts.")
+		row.add_child(b)
+		role_buttons[id] = b
+		_roster.add_child(row)
 
 
 ## While the code field has focus the game's own key actions (accept / cancel / ...) are muted,

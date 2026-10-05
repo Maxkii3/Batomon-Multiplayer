@@ -21,7 +21,8 @@ extends Control
 signal leave_pressed()
 signal watch_pressed()          # (kept for the glue: toggles the live battle replay)
 
-const COL_BAR := Color(0.05, 0.05, 0.09, 0.78)
+const COL_BAR := Color(0.05, 0.05, 0.09, 0.96)   # opaque: the game's own top strip never bleeds through
+const LEAVE_W := 42.0
 const COL_EDGE := Color(1.0, 0.85, 0.4, 0.9)
 const COL_TEXT := Color(0.96, 0.96, 0.96)
 const COL_DIM := Color(0.70, 0.70, 0.78)
@@ -117,8 +118,8 @@ func refresh() -> void:
 	_prev.size = Vector2(20, 16)
 	_next.position = Vector2(WIDTH - 22, 3)
 	_next.size = Vector2(20, 16)
-	_leave.position = Vector2(WIDTH - 44, BAR_H + 2)      # under the bar, right: the game's own exit is shielded
-	_leave.size = Vector2(42, 14)
+	_leave.position = Vector2(WIDTH - LEAVE_W - 2, BAR_H + 2)   # second row, right: never under the status pill
+	_leave.size = Vector2(LEAVE_W, SUB_H)
 	queue_redraw()
 
 
@@ -148,6 +149,8 @@ func matchup_text() -> String:
 		return ""
 	if watching and int(view.opp) != 0:
 		return "LIVE: %s vs %s%s" % [_name(int(view.id)), _name(int(view.opp)), " (ghost)" if view.bye else ""]
+	if shop_mode() and broadcast.chest_caption() != "":
+		return "%s: %s" % [_name(int(view.id)), broadcast.chest_caption()]
 	if shop_mode():
 		return "Spectating %s's Shop%s" % [_name(int(view.id)), " · READY" if bool(broadcast.ready_flag) else ""]
 	if client.state.phase == "battle" and int(view.opp) != 0:
@@ -205,11 +208,21 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, size.x, BAR_H), COL_BAR)
 	draw_line(Vector2(0, BAR_H), Vector2(size.x, BAR_H), COL_EDGE, 1.0)
 	_text(Vector2(24, 6), title_text(), COL_ACCENT, size.x - 48, HORIZONTAL_ALIGNMENT_CENTER)
-	var sub := matchup_text()
+	# second row: one solid strip under the bar - status on the left (shortened to fit), Leave on the right
+	draw_rect(Rect2(0, BAR_H + 1, size.x, SUB_H + 3), COL_BAR)
+	var sub := sub_line()
 	if sub != "":
-		var w := minf(font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 8, size.x - 48)
-		draw_rect(Rect2(0, BAR_H + 1, w, SUB_H + 2), COL_BAR)
-		_text(Vector2(4, BAR_H + 2), sub, COL_DIM, w - 6)
+		_text(Vector2(4, BAR_H + 2), sub, COL_DIM, size.x - LEAVE_W - 10)
+
+
+## The status line, shortened with an ellipsis so it always ends before the Leave button.
+func sub_line() -> String:
+	var sub := matchup_text()
+	var room := size.x - LEAVE_W - 10
+	if font != null:
+		while sub.length() > 4 and font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
+			sub = sub.substr(0, sub.length() - 2).trim_suffix("…") + "…"
+	return sub
 
 
 func _text(pos: Vector2, s: String, col: Color, width: float, align := HORIZONTAL_ALIGNMENT_LEFT) -> void:

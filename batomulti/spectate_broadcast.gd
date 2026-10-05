@@ -23,6 +23,9 @@ extends Node
 ## The game's shop UI reads RunManager.data everywhere, so the watched run is put there ONLY for the
 ## duration of each (synchronous) render call and the spectator's own run is restored right after.
 ## Live battles still open in the real battle scene on top (layer 120, glue watch_battle).
+## Chest / gift box (2026-10-06): when the watched player opens a gift (the post-battle reward screen or
+## the shop's gift popup) the shop scene's own TrinketSelectUI shows it live: the box drops, opens,
+## shows the same trinket options, and the one they took stays lit (the others dimmed).
 
 const SHOP_SCENE := "res://game/states/shop_state.tscn"
 const LAYER_OFFSET := 100          # our shop scene's CanvasLayers: above the (hidden) own game
@@ -44,12 +47,20 @@ var live := false                   # true = a live shop (not the last-board fal
 var frozen := false                 # the watched player's shop is frozen for next round
 var ready_flag := false             # the watched player pressed Battle (waiting for the room)
 var renders := 0                    # tests / live: re-renders
+var chest: Dictionary = {}          # the watched player's chest as last rendered ({} = none)
+var chest_key := ""                 # chest on screen ("" = none)
+var chest_stage := ""               # what the popup shows: "closed" | "open" | "picked"
+var chest_pick := ""
+var chest_renders := 0              # tests / live: chest versions rendered
+var _chest_show_pending := false    # the box is opening: show the options when its animation ends
+var _chest_prompt_pending := false  # the box is dropping: show the OPEN prompt when it lands
 var switches := 0                   # target changes rendered
 var _own_state: Node = null         # the spectator's own game state (hidden + disabled)
 var _own_mode := Node.PROCESS_MODE_INHERIT
 var _hidden: Array = []             # [CanvasLayer / CanvasItem] we hid
 var _shield_layer: CanvasLayer
 var _shield: Control
+var _wait_label: Label              # nothing real to show yet: say so (never a placeholder board)
 
 
 func setup(p_bm) -> void:
@@ -61,6 +72,16 @@ func setup(p_bm) -> void:
 	_shield.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_shield.mouse_filter = Control.MOUSE_FILTER_STOP        # read-only: the watched shop takes no clicks
 	_shield_layer.add_child(_shield)
+	_wait_label = Label.new()
+	_wait_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_wait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_wait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_wait_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	_wait_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_wait_label.add_theme_constant_override("outline_size", 4)
+	_wait_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wait_label.visible = false
+	_shield.add_child(_wait_label)
 	_shield_layer.visible = false
 	add_child(_shield_layer)
 
@@ -81,6 +102,47 @@ static func board_sig(team: Array, bench: Array) -> String:
 	return ",".join(parts)
 
 
+## A chest dict (glue chest_view) as one comparable line: "options|stage|pick" ("" = none).
+static func chest_sig(ch: Dictionary) -> String:
+	if ch.is_empty():
+		return ""
+	return "%s|%s|%s" % [",".join(PackedStringArray(Array(ch.get("options", [])).map(func(x): return str(x)))), str(ch.get("stage", "")), str(ch.get("pick", ""))]
+
+
+## What the real gift popup shows right now, read back from its nodes: the trinket of every option,
+## and the stage from what is visible (options hidden = closed, all lit = open, one lit = picked).
+func rendered_chest_sig() -> String:
+	var pop = _popup()
+	if pop == null or not pop.is_visible_in_tree() or chest_key == "":
+		return ""
+	var ids: PackedStringArray = []
+	var lit: Array = []
+	var shown := 0
+	for c in _options(pop):
+		var td = c.description_box.get("_current_data")
+		ids.append(str(td.id) if td != null else "?")
+		if c.modulate.a > 0.9:
+			lit.append(ids[ids.size() - 1])
+		if c.modulate.a > 0.2:
+			shown += 1
+	var stage := "closed" if shown == 0 else ("open" if lit.size() == ids.size() else ("picked" if lit.size() == 1 else "?"))
+	var pick := ""
+	if stage == "picked":
+		pick = str(lit[0])
+	elif stage == "open" and chest_pick == "*all" and chest_stage == "picked":
+		stage = "picked"                                   # took every option: all stay lit
+		pick = "*all"
+	return "%s|%s|%s" % [",".join(ids), stage, pick]
+
+
+func _popup():
+	return view.get("trinket_popup") if view != null and is_instance_valid(view) else null
+
+
+func _options(pop) -> Array:
+	return pop.container.get_children().filter(func(c): return c is TrinketSelectable and not c.is_queued_for_deletion())
+
+
 ## What the real ShopUI shows right now (read back from its slot nodes, not from our data).
 func rendered_sig() -> String:
 	if view == null or not is_instance_valid(view):
@@ -98,7 +160,7 @@ func rendered_sig() -> String:
 func update() -> void:
 	var c = client if client != null else (bm.client if bm != null else null)
 	var watching: bool = c != null and (c.is_spectating() if client != null else bm.spectating_now())
-	var want: bool = watching and bm != null and not bm.on_title_screen()
+	var want: bool = watching and bm != null and (not bm.on_title_screen() or bm.dedicated_spectator())
 	if not want:
 		if active:
 			stop()
@@ -109,6 +171,7 @@ func update() -> void:
 	var watching_battle: bool = bm.spectate_scene != null
 	_set_layers_visible(not watching_battle)
 	_shield_layer.visible = true
+	_chest_tick()
 	var id: int = c.spectate_target
 	var e: Dictionary = c.shop_view_of(id) if id != 0 else {}
 	var key := ""
@@ -121,6 +184,12 @@ func update() -> void:
 		if not v.board.is_empty():
 			key = "%d|board|%d" % [id, int(v.round)]
 			d = v.board
+	_wait_label.visible = key == "" and not watching_battle
+	if _wait_label.visible:
+		if bm != null and bm.font != null:
+			_wait_label.add_theme_font_override("font", bm.font)
+		var nm: String = str(c.state.seats.get(id, {}).get("name", "")) if id != 0 else ""
+		_wait_label.text = "Waiting for %s's screen..." % nm if nm != "" else "Waiting for the match..."
 	if key == shown_key:
 		return
 	if id != shown_id:
@@ -130,7 +199,7 @@ func update() -> void:
 	live = not e.is_empty() and e.view.has("run")
 	frozen = bool(e.view.get("frozen", false)) if live else false
 	ready_flag = bool(e.view.get("ready", false)) if live else false
-	render(d)
+	render(d, e.view.get("chest", {}) if live else {})
 
 
 func start() -> void:
@@ -148,11 +217,16 @@ func stop() -> void:
 	shown_key = ""
 	shown_id = 0
 	run = null
+	chest = {}
+	chest_key = ""
+	chest_stage = ""
+	chest_pick = ""
 	print("BatoMulti: spectator broadcast off")
 
 
-## Renders run dictionary `d` (a full stripped run, or an opponent board) in the real shop UI.
-func render(d: Dictionary) -> void:
+## Renders run dictionary `d` (a full stripped run, or an opponent board) in the real shop UI, and
+## the watched player's gift box `ch` (glue chest_view; {} = none) in its own gift popup.
+func render(d: Dictionary, ch: Dictionary = {}) -> void:
 	var rm = get_node_or_null("/root/RunManager")
 	if rm == null:
 		return
@@ -174,8 +248,130 @@ func render(d: Dictionary) -> void:
 		view.update_shop_slots(offers, frozen, false)
 		view.update_freeze_button(frozen)
 		view.update_reroll_cost_visuals(0 if run.get_free_rerolls_available() > 0 else int(ShopManager.REROLL_COST))
+		_render_chest(ch)                              # (option tooltips / copy counters read the watched run too)
+		_hide_personal()                               # (an update_* call may have shown one again)
 	rm.data = own
 	renders += 1
+
+
+## The spectator's screen is the watched player's game, not a second copy of the own HUD: the trinket
+## bag (backpack, top-left), Dex / Settings / Quit (top-right) and the Battle / Cancel buttons are
+## personal interactables -> hidden (operator 2026-10-06). Reroll / Lock stay: they show their cost / lock.
+const PERSONAL := ["trinket_bag_ui", "dex_button", "settings_button", "quit_button", "battle_button", "cancel_button", "hide_trinket_ui_button"]
+
+
+func _hide_personal() -> void:
+	if view == null or not is_instance_valid(view):
+		return
+	for n in PERSONAL:
+		var w = view.get(n)
+		if w is CanvasItem:
+			w.visible = false
+
+
+## Tests / live report: personal widgets visible on the spectator's shop right now (must stay empty).
+func personal_visible() -> Array:
+	var out: Array = []
+	if view != null and is_instance_valid(view):
+		for n in PERSONAL:
+			var w = view.get(n)
+			if w is CanvasItem and w.is_visible_in_tree():
+				out.append(n)
+	return out
+
+
+## The watched player's gift box, live: a new chest drops (OPEN prompt when it lands), opens (the same
+## options appear), and the taken trinket stays lit. Driven step by step from the game's own popup
+## animations; play_present_animation() itself is never called (it waits for a click and emits the
+## game's trinket_reward_opened, which would start the spectator's own trinket tutorial).
+func _render_chest(ch: Dictionary) -> void:
+	var pop = _popup()
+	chest = ch.duplicate()
+	if pop == null:
+		return
+	if ch.is_empty():
+		if chest_key != "":
+			pop.visible = false
+			chest_key = ""
+			chest_stage = ""
+			chest_pick = ""
+			_chest_show_pending = false
+			_chest_prompt_pending = false
+		return
+	var st := str(ch.get("stage", "closed"))
+	var late := false                                  # switched in after the box was opened: no animations
+	if str(ch.get("key", "")) != chest_key:
+		chest_key = str(ch.get("key", ""))
+		chest_stage = ""
+		chest_pick = ""
+		var opts: Array = []
+		for id in ch.get("options", []):
+			var td = GameDatabase.get_trinket_by_id(str(id))
+			if td != null:
+				opts.append(td)
+		pop.refresh(opts)                              # the game's own option cards (hidden until opened)
+		pop.open_present_prompt.visible = false
+		pop.anim_player.play("RESET")
+		pop.anim_player.play("present_drop")
+		_chest_prompt_pending = true
+		chest_stage = "closed"
+		if st != "closed":
+			late = true
+			pop.anim_player.advance(60.0)              # joined while it is already open: no drop replay
+	if st in ["open", "picked"] and chest_stage == "closed":
+		_chest_prompt_pending = false
+		pop.open_present_prompt.visible = false
+		pop.anim_player.play("present_open")
+		_chest_show_pending = true
+		chest_stage = "opening"
+		if late or st == "picked" or not pop.anim_player.is_playing():
+			pop.anim_player.advance(60.0)
+		_chest_tick()
+	if st == "picked" and chest_stage == "opening":
+		pop.anim_player.advance(60.0)
+		_chest_tick()
+	if st == "picked" and chest_stage == "open":
+		chest_pick = str(ch.get("pick", ""))
+		for c in _options(pop):
+			var td = c.description_box.get("_current_data")
+			var lit: bool = chest_pick == "*all" or (td != null and str(td.id) == chest_pick)
+			c.modulate.a = 1.0 if lit else 0.3
+		pop.take_all_button.visible = false
+		chest_stage = "picked"
+	chest_renders += 1
+
+
+## Every frame: the drop / open animations hand over to the prompt / the options when they end.
+func _chest_tick() -> void:
+	var pop = _popup()
+	if pop == null or chest_key == "":
+		return
+	if _chest_prompt_pending and not pop.anim_player.is_playing():
+		_chest_prompt_pending = false
+		pop.open_present_prompt.visible = chest_stage == "closed"
+	if _chest_show_pending and not pop.anim_player.is_playing():
+		_chest_show_pending = false
+		for c in _options(pop):
+			c.play_show_animation()
+			c.anim_player.advance(60.0)                # the cards' own show animation, ended at once
+			c.modulate.a = 1.0
+		pop.take_all_button.visible = bool(chest.get("take_all", false)) and _options(pop).size() > 1
+		chest_stage = "open"
+
+
+## The caption under the spectator bar while a chest is on screen ("" = none).
+func chest_caption() -> String:
+	match chest_stage:
+		"closed", "opening":
+			return "opening a gift box"
+		"open":
+			return "choosing a trinket"
+		"picked":
+			if chest_pick == "*all":
+				return "took every trinket"
+			var td = GameDatabase.get_trinket_by_id(chest_pick)
+			return "took %s" % (tr(str(td.name_key)) if td != null and str(td.name_key) != "" else chest_pick)
+	return ""
 
 
 func _build() -> void:
@@ -193,6 +389,7 @@ func _build() -> void:
 	var lives_box = view.get("lives_count_label").get_parent() if view != null and view.get("lives_count_label") != null else null
 	if lives_box is CanvasItem:
 		lives_box.visible = false                          # the HUD bar shows the watched player's hearts there
+	_hide_personal()
 	if view != null and view.get("transition_anim") != null:
 		view.transition_anim.play("fade_in")              # the scene starts covered by its own transition:
 		view.transition_anim.advance(60.0)                 # jump to the end (instant, no black frames)

@@ -139,6 +139,8 @@ func handle(from: int, msg: Dictionary) -> void:
 			_on_bstart(from, b)
 		P.SHOP_VIEW:
 			_on_shop_view(from, b)
+		P.ROLE:
+			_on_role(from, int(b.id), str(b.role))
 		P.SYNC_REQ:
 			if state.seats.has(from) and state.seats[from].status != LobbyState.LEFT:
 				stats.sync_req += 1
@@ -240,6 +242,21 @@ func _on_at_shop(from: int, r: int) -> void:
 				_send(from, P.ROUND_OPEN, {"round": state.round_n, "seconds": maxf(1.0, _deadline - now)})
 
 
+## Lobby role switch (v0.7.0): a member changes its OWN seat; only the host may change anyone's.
+## Anything else (another member's seat, a running match, a full player list) is refused and
+## counted; the lobby broadcast puts every client's sidebar back to the room's truth.
+func _on_role(from: int, id: int, role: String) -> void:
+	var allowed: bool = from == id or from == t.self_id
+	if not allowed or not state.seats.has(from) or not state.set_role(id, role):
+		stats["role_denied"] = int(stats.get("role_denied", 0)) + 1
+		_log("role change refused: %d asked %d -> %s (%s)" % [from, id, role, "not their seat" if not allowed else "not possible now"])
+		_broadcast_lobby()
+		return
+	stats["role_changes"] = int(stats.get("role_changes", 0)) + 1
+	_log("%s is now a %s%s" % [state.seats[id].name, role, " (set by the host)" if from != id else ""])
+	_broadcast_lobby()
+
+
 ## A fighter's battle started ticking `dt` s after it got round_start: spectators lock their replay
 ## of that fight to it (seat fields bt_r / bt_dt ride the lobby state).
 func _on_bstart(from: int, b: Dictionary) -> void:
@@ -275,7 +292,7 @@ func _push_shop_views(fresh_id := 0) -> void:
 		return
 	for sid in state.seats:
 		var seat: Dictionary = state.seats[sid]
-		if seat.status != LobbyState.ELIMINATED or not bool(seat.get("connected", true)):
+		if not (seat.status in [LobbyState.ELIMINATED, LobbyState.SPECTATOR]) or not bool(seat.get("connected", true)):
 			continue
 		if not _shop_sent.has(sid):
 			_shop_sent[sid] = {}
@@ -312,8 +329,8 @@ func _on_result(from: int, b: Dictionary) -> void:
 # ------------------------------------------------------------ flow
 
 func start_match() -> bool:
-	if state.phase != "lobby" or state.seats.size() < 2:
-		return false
+	if state.phase != "lobby" or state.players().size() < 2:
+		return false                              # dedicated spectators do not count: 2 players at least
 	state.reset_for_match()
 	_shop_views.clear()
 	_shop_sent.clear()
@@ -332,7 +349,7 @@ func start_match() -> bool:
 		_send(id, P.WELCOME, {"token": tokens[id], "epoch": epoch})
 	_broadcast_lobby()
 	broadcast_sync()                          # round-1 snapshot: migration works from the start
-	_log("match started, %d players" % state.seats.size())
+	_log("match started, %d players, %d spectators" % [state.players().size(), state.spectators().size()])
 	return true
 
 

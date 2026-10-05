@@ -14,7 +14,7 @@ extends RefCounted
 ## decoding uses bytes_to_var, which never decodes objects, plus a per-type schema check. Anything
 ## else is dropped.
 
-const VERSION := 5              # 4: bstart (live spectator time sync) · 5: shopview / shoplive (live shop mirror)
+const VERSION := 6              # 4: bstart (live spectator time sync) · 5: shopview / shoplive (live shop mirror) · 6: role (player / spectator seats)
 const MAX_BYTES := 512 * 1024
 const CHANNEL := 7
 
@@ -26,7 +26,8 @@ const RESULT := "result"
 const LEAVE := "leave"
 const BSTART := "bstart"              # my battle started ticking dt seconds after round_start (spectator sync)
 const SYNC_REQ := "sync_req"          # "I lost track": the host answers with sync_full_state
-const SHOP_VIEW := "shopview"         # my live shop (board, bench, offers, gold) changed (spectator mirror)
+const SHOP_VIEW := "shopview"         # my live shop (board, bench, offers, gold, chest) changed (spectator mirror)
+const ROLE := "role"                  # lobby: set seat `id` to "player" / "spectator" (own seat, or any seat by the host)
 # host -> clients
 const REJECT := "reject"
 const WELCOME := "welcome"            # private: the session token (rejoin / host migration)
@@ -40,7 +41,7 @@ const GAME_OVER := "game_over"
 const SYNC := "sync_full_state"       # authoritative snapshot (rejoin catch-up, confirmed rounds)
 const SHOP_LIVE := "shoplive"         # relayed shopview of player `id`: ONLY to spectators (never to alive players)
 
-const TO_HOST := [HELLO, AT_SHOP, READY, RESULT, LEAVE, SYNC_REQ, BSTART, SHOP_VIEW]
+const TO_HOST := [HELLO, AT_SHOP, READY, RESULT, LEAVE, SYNC_REQ, BSTART, SHOP_VIEW, ROLE]
 
 ## field -> Variant type, per message type
 const SCHEMA := {
@@ -53,6 +54,7 @@ const SCHEMA := {
 	SYNC_REQ: {"round": TYPE_INT},
 	BSTART: {"round": TYPE_INT, "dt": TYPE_FLOAT},
 	SHOP_VIEW: {"round": TYPE_INT, "seq": TYPE_INT, "data": TYPE_PACKED_BYTE_ARRAY, "raw": TYPE_INT},
+	ROLE: {"id": TYPE_INT, "role": TYPE_STRING},
 	REJECT: {"why": TYPE_STRING},
 	WELCOME: {"token": TYPE_STRING, "epoch": TYPE_INT},
 	LOBBY: {"state": TYPE_DICTIONARY},

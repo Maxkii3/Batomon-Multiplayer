@@ -103,8 +103,11 @@ func my_place() -> int:
 
 
 func headline() -> String:
-	var n: int = client.state.seats.size()
+	var n: int = client.state.standings().size()
 	var p := my_place()
+	if client.is_dedicated_spectator():
+		var w: Array = client.state.winners().map(func(id): return str(client.state.seats.get(id, {}).get("name", "?")))
+		return "You watched the match: %s won." % ", ".join(w)
 	if p == 1:
 		return "VICTORY! You won the match." if client.state.winners().size() == 1 else "VICTORY! You shared 1st place."
 	return "You placed %s of %d." % [ordinal(p), n] if p > 0 else "The match is over."
@@ -112,7 +115,7 @@ func headline() -> String:
 
 func panel_rect() -> Rect2:
 	var vp := get_viewport_rect().size
-	var h: float = HEAD + ROW * (client.state.seats.size() + 1) + 34.0
+	var h: float = HEAD + ROW * (client.state.standings().size() + 1) + 34.0
 	return Rect2(Vector2((vp.x - WIDTH) / 2.0, maxf(8.0, (vp.y - h) / 2.0 - 10.0)), Vector2(WIDTH, h))
 
 

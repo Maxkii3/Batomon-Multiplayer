@@ -26,6 +26,11 @@ const SWAP_PAIRS := [
 ]
 
 var mirrored := false
+## Spectating (2026-10-06): no personal widgets (trinket bags), and when the spectator has no run of its
+## own (a dedicated spectator on the main menu) the game's field setup reads this run instead of a null
+## RunManager.data (battle_view.gd:312 -> the whole setup aborted: placeholder foxes, labels mirrored).
+var spectate := false
+var spectate_run: RunData = null
 
 
 func set_mirrored(on: bool) -> void:
@@ -56,8 +61,31 @@ func _fix_ui_flips() -> void:
 
 
 func setup_battle_field(data: BattleData, current_round: int, current_wins: int, current_lives: int, p1_trinkets: Array[String], p1_used_trinkets: Array[String], p2_trinkets: Array[String], p2_used_trinkets: Array[String], p2_mask_trainer_choices: Array = [], is_replay: bool = false):
+	var swapped := false
+	if spectate and spectate_run != null and RunManager.data == null:
+		RunManager.data = spectate_run                     # only while the field is set up (2 frames)
+		swapped = true
 	await super(data, current_round, current_wins, current_lives, p1_trinkets, p1_used_trinkets, p2_trinkets, p2_used_trinkets, p2_mask_trainer_choices, is_replay)
+	if swapped and RunManager.data == spectate_run:
+		RunManager.data = null
 	_fix_ui_flips()
+	if spectate:
+		hide_personal_widgets()
+
+
+## Spectator: the fighters' trinket bags (backpacks, top corners) are personal widgets: hidden.
+func hide_personal_widgets() -> void:
+	for n in ["player_trinket_bag_ui", "enemy_trinket_bag_ui"]:
+		var w = get(n)
+		if w is CanvasItem:
+			w.visible = false
+
+
+## Spectator: bags stay hidden (and the game's team-0 refresh would read a null RunManager.data).
+func update_team_trinkets(team_id: int, trinket_ids: Array, used_trinket_ids: Array):
+	if spectate:
+		return
+	return super(team_id, trinket_ids, used_trinket_ids)
 
 
 func _on_unit_spawned(unit: BattleUnit):
@@ -68,7 +96,7 @@ func _on_unit_spawned(unit: BattleUnit):
 ## setup_battle_field fills the (now right-hand) player bag with RunManager's mask choices: redo
 ## both bags with each team's own data.
 func refresh_mirrored_bags(team0: RunData, team1: RunData) -> void:
-	if not mirrored:
+	if not mirrored or spectate:
 		return
 	player_trinket_bag_ui.refresh(team0.trinket_ids, team0.used_trinket_ids, team0.mask_trainer_choices)
 	enemy_trinket_bag_ui.refresh(team1.trinket_ids, team1.used_trinket_ids, team1.mask_trainer_choices)

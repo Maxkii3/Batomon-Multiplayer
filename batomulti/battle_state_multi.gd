@@ -77,6 +77,8 @@ func enter(data: Dictionary = {}):
 		view.set_mirrored(me == 1)
 	if view.has_method("set_lobby_speed") and battle_speed() > 0.0:
 		view.set_lobby_speed(battle_speed())
+	if bool(bm_fight.get("spectate", false)) and "spectate" in view:
+		view.spectate = true
 	if not bool(bm_fight.get("spectate", false)):
 		outcome_hidden = true                        # until the visual battle ends: no result anywhere
 		if b != null and b.has_method("my_battle_on_screen"):
@@ -229,6 +231,8 @@ func _start_visual_battle(is_replay: bool):
 		view.simulation_paused_toggled.connect(_on_view_paused)
 	var pl: RunData = v1 if me == 1 else v0             # the side shown as "the player" (left)
 	var en: RunData = v0 if me == 1 else v1
+	if spectating and "spectate_run" in view:
+		view.spectate_run = (_replay_p2_data if me == 1 else _replay_p1_data).duplicate_deep(RunData.CopyMode.TEMPLATE)
 	await view.setup_battle_field(simulation.data, pl.current_round, pl.current_wins, pl.lives,
 		v0.trinket_ids, v0.used_trinket_ids, v1.trinket_ids, v1.used_trinket_ids, v1.mask_trainer_choices, is_replay)
 	if view.has_method("refresh_mirrored_bags"):
@@ -264,6 +268,45 @@ func _start_visual_battle(is_replay: bool):
 		p1_name = UserManager.data.display_name
 		p2_name = en.display_name if en.display_name != "" else enemy_trainer.name
 	_play_intro_sequence(player_trainer, enemy_trainer, p1_name, p2_name)
+
+
+## Spectator proof (2026-10-06, operator: placeholder foxes on the board): every unit still in the fight
+## as DRAWN - its visual's sprite texture + level label, readable (not mirrored on screen) - and its
+## species = the room's board in that slot; no board-empty slot drawn. Units knocked out before this
+## frame (a live join mid-fight) are gone from the fighter's screen too: counted, not drawn.
+## {ok, units (drawn + checked), down, bad: [...]}.
+func drawn_check() -> Dictionary:
+	var out := {"ok": true, "units": 0, "down": 0, "bad": []}
+	var live: Dictionary = {}                            # "team|slot" -> BattleUnit
+	for u in simulation.data.battle_units:
+		live["%d|%d" % [u.team_id, u.slot_index]] = u
+	for team in 2:
+		var run: RunData = _replay_p1_data if team == 0 else _replay_p2_data
+		for i in 6:
+			var want = run.team[i] if i < run.team.size() else null
+			var u = live.get("%d|%d" % [team, i])
+			var v = view._get_visual(team, i)
+			if want == null:
+				if u == null and v != null and is_instance_valid(v) and v.visible and v.sprite.texture != null:
+					out.bad.append("t%d s%d: drawn but the board slot is empty" % [team, i])
+				continue
+			if u == null or bool(u.is_dead):
+				out.down += 1
+				continue
+			if str(u.source_monster.data.id) != str(want.data.id):
+				out.bad.append("t%d s%d: fighting %s, the room's board has %s" % [team, i, u.source_monster.data.id, want.data.id])
+			if v == null or not is_instance_valid(v):
+				out.bad.append("t%d s%d %s: not drawn" % [team, i, want.data.id])
+				continue
+			out.units += 1
+			if v.sprite.texture != u.source_monster.get_sprite_texture():
+				out.bad.append("t%d s%d: sprite %s, want %s" % [team, i, str(v.sprite.texture.resource_path if v.sprite.texture else "none").get_file(), want.data.id])
+			if str(v.level_label.text) != "LV. %d" % int(u.source_monster.level):
+				out.bad.append("t%d s%d %s: label '%s', want LV. %d" % [team, i, want.data.id, v.level_label.text, int(u.source_monster.level)])
+			if v.level_label.get_global_transform().x.x < 0.0:
+				out.bad.append("t%d s%d %s: label mirrored on screen" % [team, i, want.data.id])
+	out.ok = out.bad.is_empty() and out.units > 0
+	return out
 
 
 ## Live join: the field as the game shows it right after its intro (HUD slid in, monsters placed,
@@ -302,6 +345,8 @@ func _process(delta):
 		return super(delta)
 	if not is_battle_active or simulation == null or simulation.data.battle_over:
 		return
+	if not last_result.has("drawn"):
+		last_result["drawn"] = drawn_check()            # the first live frame ON SCREEN = the room's boards (no placeholders)
 	var target: float = live_time.call()
 	if target < 0.0:
 		held_frames += 1                               # the fighter's battle has not started: wait in sync

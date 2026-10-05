@@ -69,6 +69,13 @@ func process_post_battle_progression(target_data: RunData):
 		Comeback.ensure(target_data)
 
 
+## Chest mirror: what was taken from the gift box reaches the spectators (shown, then cleared).
+func confirm_trinket_selection(trinket_id: String, take_all: bool = false):
+	if _bm_on():
+		_bm().chest_picked(trinket_id, take_all)
+	return super(trinket_id, take_all)
+
+
 ## Runs right after BattleState commits the battle. A lobby run never reaches run_summary:
 ## UserManager.apply_run_results() does not check offline_origin and would write profile stats.
 func determine_post_battle_state() -> String:

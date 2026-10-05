@@ -15,6 +15,11 @@ extends RefCounted
 const ALIVE := "alive"
 const ELIMINATED := "eliminated"
 const LEFT := "left"
+const SPECTATOR := "spectator"   # status of a dedicated spectator during a match (never paired, no standings row)
+## Seat roles (v0.7.0, lobby sidebar): a "spectator" seat watches the whole match from round 1.
+const ROLE_PLAYER := "player"
+const ROLE_SPECTATOR := "spectator"
+const MAX_SPECTATORS := 8        # spectator seats on top of max_players
 
 const DEFAULT_SETTINGS := {
 	"shop_seconds": 120.0,      # shop / preparation phase per round
@@ -35,15 +40,54 @@ var lobby_seed := 0
 var rev := 0                     # +1 per host broadcast: clients never go back to an older state
 
 
+## A new seat joins as a player; when every player slot is taken it joins as a spectator.
 func add_player(id: int, name: String) -> bool:
 	if seats.has(id):
 		seats[id].name = name
 		return true
-	if seats.size() >= int(settings.max_players) or phase != "lobby":
+	if phase != "lobby" or seats.size() >= int(settings.max_players) + MAX_SPECTATORS:
 		return false
+	var role := ROLE_PLAYER if players().size() < int(settings.max_players) else ROLE_SPECTATOR
 	seats[id] = {"id": id, "name": name, "lives": int(settings.lives), "wins": 0, "losses": 0,
 		"status": ALIVE, "out_round": 0, "ready": false, "at_shop": 0, "connected": true, "token_hash": "",
-		"second_chance": false}
+		"second_chance": false, "role": role}
+	return true
+
+
+static func is_spectator_seat(seat: Dictionary) -> bool:
+	return str(seat.get("role", ROLE_PLAYER)) == ROLE_SPECTATOR
+
+
+## Seat ids that play (role player), sorted.
+func players() -> Array:
+	var out: Array = []
+	for id in seats:
+		if not is_spectator_seat(seats[id]):
+			out.append(id)
+	out.sort()
+	return out
+
+
+## Seat ids of the dedicated spectators, sorted.
+func spectators() -> Array:
+	var out: Array = []
+	for id in seats:
+		if is_spectator_seat(seats[id]):
+			out.append(id)
+	out.sort()
+	return out
+
+
+## Lobby only: switch a seat between "player" and "spectator" (who may ask is checked by the host).
+## False when not allowed (match running, unknown seat / role, every player slot taken).
+func set_role(id: int, role: String) -> bool:
+	if phase != "lobby" or not seats.has(id) or not (role in [ROLE_PLAYER, ROLE_SPECTATOR]):
+		return false
+	if str(seats[id].get("role", ROLE_PLAYER)) == role:
+		return true
+	if role == ROLE_PLAYER and players().size() >= int(settings.max_players):
+		return false
+	seats[id]["role"] = role
 	return true
 
 
@@ -55,7 +99,7 @@ func remove_player(id: int) -> void:
 	elif phase == "over":
 		seats[id].connected = false               # the result is final: leaving changes nothing
 	else:
-		if seats[id].status == ELIMINATED:        # a spectator leaving keeps "OUT Rn"
+		if seats[id].status == ELIMINATED or seats[id].status == SPECTATOR:   # a spectator leaving keeps "OUT Rn"
 			seats[id].connected = false
 			return
 		if seats[id].status == ALIVE:
@@ -71,7 +115,7 @@ func reset_for_match() -> void:
 		s.lives = int(settings.lives)
 		s.wins = 0
 		s.losses = 0
-		s.status = ALIVE
+		s.status = SPECTATOR if is_spectator_seat(s) else ALIVE
 		s.out_round = 0
 		s.ready = false
 		s.at_shop = 0
@@ -93,7 +137,7 @@ func is_connected_seat(id: int) -> bool:
 func alive_ids() -> Array:
 	var out: Array = []
 	for id in seats:
-		if seats[id].status == ALIVE:
+		if seats[id].status == ALIVE and not is_spectator_seat(seats[id]):
 			out.append(id)
 	out.sort()
 	return out
@@ -169,9 +213,10 @@ func winners() -> Array:
 	return out
 
 
-## Seats sorted: lives desc, wins desc, still alive / later elimination first, name.
+## Player seats sorted: lives desc, wins desc, still alive / later elimination first, name.
+## Dedicated spectators have no row (they never play).
 func standings() -> Array:
-	var rows: Array = seats.values().duplicate()
+	var rows: Array = seats.values().filter(func(x): return not is_spectator_seat(x))
 	rows.sort_custom(func(x, y):
 		if int(x.lives) != int(y.lives):
 			return int(x.lives) > int(y.lives)

@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.0"
+const VERSION := "0.6.1"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -106,6 +106,9 @@ var shown_results: Array = []       # battle_state_multi last_result per lobby b
 var shown_mismatches := 0           # battles whose on-screen result differed from the canonical one
 var spectate_shown: Array = []      # v0.6.0 live battles watched as a spectator (last_result each)
 var spectate_mismatches := 0        # watched battles whose on-screen result differed from the canonical one
+var spectate_drawn_bad: Array = []  # watched battles whose DRAWN units differed from the room's boards (must stay empty)
+var _board_folded := false          # leaderboard folded to its header while a watched battle is on screen
+var _board_was_collapsed := false
 var spoiler_frames := 0             # frames the ELIMINATED cover showed while my battle still played (must stay 0)
 var shop_views_sent := 0            # live shop mirror: my shop views sent to the room
 var shop_rerolls := 0               # rerolls in the running shop round (mirrored to spectators)
@@ -113,6 +116,19 @@ var _shop_rerolls_round := 0
 var _shop_mirror_at := 0.0
 var _my_battle: WeakRef = null      # my lobby battle scene while it plays (outcome_hidden)
 const SHOP_MIRROR_PERIOD := 0.2     # s between live shop checks (a change goes out at the next one)
+const TRINKET_SELECT_STATE := "res://game/states/trinket_select_state.gd"
+const EVENT_STATE := "res://game/states/event_state.gd"
+## Chest mirror (2026-10-06, operator: spectators never saw the gift / chest screen): the gift box
+## (TrinketSelectUI: the post-battle reward screen and the shop's own gift popup) rides the live shop
+## view: options, stage closed -> open -> picked, and what was taken (RunManager layer hook).
+const CHEST_PICK_SHOW := 2.5        # s the taken trinket stays on the spectators' screen
+var _gift_uis: Array = []           # TrinketSelectUI nodes seen (weakrefs)
+var _chest_seq := 0
+var _chest_opts := ""               # options of the chest in progress ("" = none)
+var _chest_opened := false
+var _chest_pick := ""               # trinket id taken ("*all" = take all), "" = not yet
+var _chest_pick_at := 0.0
+var chest_views_sent := 0           # live report: chest versions in my shop views
 var spectate_scene: Node = null     # the read-only battle scene while watching
 var _spectate_expect: Dictionary = {} # the room's result for the watched pair: winner / hp / time (exact check)
 var _spectate_key := ""             # "round|a|b" being watched (auto-watch: once per pair and round)
@@ -459,6 +475,8 @@ func _wire_client() -> void:
 func _on_node_added(n: Node) -> void:
 	if n is ShopUI and not n.reroll_requested.is_connected(_on_shop_reroll):
 		n.reroll_requested.connect(_on_shop_reroll)
+	if n is TrinketSelectUI and not (broadcast != null and broadcast.is_ancestor_of(n)):
+		_gift_uis.append(weakref(n))                 # my own gift boxes (not the spectator copy)
 	var s = n.get_script()
 	if s != null and not _pending_fight.is_empty() and BATTLE_SWAPS.has(str(s.resource_path)):
 		swap_script(n, {"state": BattleStateMulti, "view": BattleViewMirror, "director": EffectDirectorMirror}[BATTLE_SWAPS[str(s.resource_path)]])
@@ -632,20 +650,82 @@ func shop_view(run, r: int) -> Dictionary:
 	return {"round": r, "run": Broadcast.strip_run(run.to_dictionary()),
 		"rerolls": shop_rerolls if _shop_rerolls_round == r else 0,
 		"frozen": bool(mgr.is_shop_frozen) if mgr != null else bool(run.is_shop_frozen_next_round),
-		"ready": client != null and client.phase == "ready_wait"}
+		"ready": client != null and client.phase == "ready_wait",
+		"screen": _mirror_screen(), "chest": chest_view(run)}
+
+
+## The screen my live view is sent from: "shop", "reward" (the post-battle gift / chest), "event", or
+## "" (anything else: battle, trainer select... nothing is mirrored).
+func _mirror_screen() -> String:
+	var st = _game_state()
+	var path: String = str(st.get_script().resource_path) if st != null and st.get_script() != null else ""
+	return {SHOP_STATE: "shop", TRINKET_SELECT_STATE: "reward", EVENT_STATE: "event"}.get(path, "")
+
+
+## My gift box as the spectators see it: {} = none, else {key, options, stage, pick, take_all}.
+## stage: "closed" (dropped, not opened yet), "open" (the options are shown), "picked" (taken: kept on
+## screen CHEST_PICK_SHOW s). Options come from the run (pending_reward), the stage from the game's UI.
+func chest_view(run) -> Dictionary:
+	var now := Time.get_ticks_msec() / 1000.0
+	var pr = run.get("pending_reward") if run != null else null
+	var opts: Array = pr.get("options", []) if pr is Dictionary else []
+	var key := ",".join(PackedStringArray(opts.map(func(x): return str(x))))
+	if key != "" and key != _chest_opts:
+		_chest_seq += 1                                # a new chest
+		_chest_opts = key
+		_chest_opened = false
+		_chest_pick = ""
+	if key == "":
+		if _chest_opts != "" and _chest_pick != "" and now - _chest_pick_at < CHEST_PICK_SHOW:
+			return {"key": "%d:%s" % [_chest_seq, _chest_opts], "options": Array(_chest_opts.split(",")), "stage": "picked",
+				"pick": _chest_pick, "take_all": false}
+		_chest_opts = ""
+		return {}
+	if _chest_ui_stage() == "open":
+		_chest_opened = true
+	return {"key": "%d:%s" % [_chest_seq, key], "options": opts.map(func(x): return str(x)),
+		"stage": "open" if _chest_opened else "closed", "pick": "", "take_all": bool(pr.get("take_all", false))}
+
+
+## "closed" / "open" from my own visible gift UI ("" = none shown): open once the present is opening.
+func _chest_ui_stage() -> String:
+	for w in _gift_uis.duplicate():
+		var ui = w.get_ref()
+		if ui == null or not is_instance_valid(ui):
+			_gift_uis.erase(w)
+			continue
+		if not ui.is_visible_in_tree():
+			continue
+		if bool(ui.get("_awaiting_present_open")):
+			return "closed"
+		var ap = ui.get("anim_player")
+		if bool(ui.get("_selection_enabled")) or bool(ui.get("_take_one_prompt_up")) or (ap != null and str(ap.current_animation) == "present_open"):
+			return "open"
+		return "closed"
+	return ""
+
+
+## RunManager layer: a trinket was taken from my chest (take_all = every option).
+func chest_picked(trinket_id: String, take_all: bool) -> void:
+	_chest_pick = "*all" if take_all else trinket_id
+	_chest_pick_at = Time.get_ticks_msec() / 1000.0
+	_chest_opened = true
 
 
 ## Sends my shop when it changed (checked every SHOP_MIRROR_PERIOD while the shop is open).
 func _mirror_shop(now: float) -> void:
 	if client == null or not client.in_match() or client.is_spectating() or not lobby_run_live() or is_out():
 		return
-	if now - _shop_mirror_at < SHOP_MIRROR_PERIOD or not _in_shop():
+	if now - _shop_mirror_at < SHOP_MIRROR_PERIOD or _mirror_screen() == "":
 		return
 	_shop_mirror_at = now
 	var rm = get_node_or_null("/root/RunManager")
 	var r := int(rm.data.current_round)
-	if client.send_shop_view(r, shop_view(rm.data, r), Broadcast.board_sig(rm.data.team, rm.data.bench)):
+	var v := shop_view(rm.data, r)
+	if client.send_shop_view(r, v, Broadcast.board_sig(rm.data.team, rm.data.bench), Broadcast.chest_sig(v.chest)):
 		shop_views_sent += 1
+		if not v.chest.is_empty():
+			chest_views_sent += 1
 
 
 ## Spectating right now: the room confirmed the elimination, or the player chose Spectate in the
@@ -768,6 +848,10 @@ func battle_shown(res: Dictionary) -> void:
 			ok = ok and eh.size() == 2 and absf(float(res.hp[0]) - float(eh[0])) < 0.01 and absf(float(res.hp[1]) - float(eh[1])) < 0.01 \
 				and absf(float(res.time) - float(_spectate_expect.get("time", -1.0))) < 0.001
 			res["exact"] = ok
+		var dr: Dictionary = res.get("drawn", {})
+		if not dr.is_empty() and not bool(dr.get("ok", false)):
+			ok = false
+			spectate_drawn_bad.append([res.get("round"), dr.get("bad", []).slice(0, 4)])
 		spectate_shown.append(res)
 		if not ok:
 			spectate_mismatches += 1
@@ -978,6 +1062,21 @@ func start_match() -> void:
 		_status("Match started.")
 
 
+## Lobby sidebar: Player <-> Spectator for seat `id` (own seat; the host may switch anyone).
+func set_role(id: int, role: String) -> void:
+	if client == null or client.phase != "lobby":
+		return
+	var me: int = transport.self_id if transport != null else 0
+	if id != me and not (transport != null and transport.is_host()):
+		_status("Only the host can change another player's role.", true)
+	client.request_role(id, role)                     # the host checks it either way
+
+
+## A dedicated spectator of the running (or just finished) match: watches from the main menu.
+func dedicated_spectator() -> bool:
+	return client != null and client.phase in ["spectating", "over"] and client.is_dedicated_spectator()
+
+
 func _on_room_failed(why: String) -> void:
 	_status(why, true)
 	if _rejoin_until <= 0.0 and client.token != "" and transport.code == "" and why.begins_with("No room"):
@@ -1029,6 +1128,11 @@ func _on_received(from: int, bytes: PackedByteArray) -> void:
 ## Host pressed Start: every player still on the main menu starts the lobby run right away
 ## (offline, never ranked) and goes to trainer selection like a normal new run.
 func _on_match_started(_seed: int) -> void:
+	if client.is_dedicated_spectator():
+		close_lobby()                                    # no run: the broadcast + HUD take the screen from round 1
+		_status("The match started: you are a spectator. Switch players with < / > or the leaderboard.")
+		print("BatoMulti: dedicated spectator from round 1")
+		return
 	if not on_title_screen():
 		_status("The match started: return to the main menu to join in.", true)
 		return
@@ -1253,6 +1357,14 @@ func _process(_delta: float) -> void:
 		session.tick(now)
 	if board_ui != null and board_ui.client != null:
 		board_ui.visible = board_ui.client.in_match() or board_ui.client.phase == "over"
+		var fold: bool = spectate_scene != null           # a watched battle: header only, the HP bars stay clear
+		if fold != _board_folded:
+			if fold:
+				_board_was_collapsed = board_ui.collapsed
+				board_ui.collapsed = true
+			else:
+				board_ui.collapsed = _board_was_collapsed
+			_board_folded = fold
 	if spectator != null and client != null:
 		if early_spectate and (not client.in_match() or not is_out()):
 			_end_early_spectate()
@@ -1270,10 +1382,10 @@ func _process(_delta: float) -> void:
 		if next_bar.visible:
 			next_seen[client.state.round_n] = [next_bar.opp, next_bar.ghost]
 	if results != null:
-		var show_results: bool = results.should_show() and not on_title_screen()
+		var show_results: bool = results.should_show() and (not on_title_screen() or dedicated_spectator())
 		if show_results and not results.visible:
 			results.collapsed = false
-			print("BatoMulti: results screen (place %d of %d)" % [results.my_place(), client.state.seats.size()])
+			print("BatoMulti: results screen (place %d of %d)" % [results.my_place(), client.state.standings().size()])
 		results.visible = show_results
 	if scout != null and scout.visible:
 		var sc = scout.client

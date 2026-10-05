@@ -65,7 +65,7 @@ var spectate_target := 0
 var shop_live: Dictionary = {}    # spectators: player id -> {round, seq, view, at} (live shop mirror)
 var shop_seq := 0                 # my shopview counter
 var _shop_hash := ""
-var shop_sent_log: Array = []     # [round, seq, hash, unix time, board sig] per new shop version (live report cross-check)
+var shop_sent_log: Array = []     # [round, seq, hash, unix time, board sig, chest sig] per new shop version (live report cross-check)
 var shop_recv_log: Array = []     # spectators: [id, round, seq, hash, unix time] per received version
 const SHOP_LOG_CAP := 3000
 var _shop_sent_at := -1000.0
@@ -144,6 +144,18 @@ func my_seat() -> Dictionary:
 	return state.seats.get(t.self_id, {}) if t != null else {}
 
 
+## v0.7.0: this seat is a dedicated spectator (lobby role): never paired, watches from round 1.
+func is_dedicated_spectator() -> bool:
+	return LobbyState.is_spectator_seat(my_seat())
+
+
+## Lobby sidebar: ask the host to set seat `id` to "player" / "spectator". The host only accepts
+## this player's own seat, or any seat when this player is the host; the next lobby state shows it.
+func request_role(id: int, role: String) -> void:
+	if phase == "lobby":
+		_send(P.ROLE, {"id": id, "role": role})
+
+
 func seconds_left() -> float:
 	return maxf(0.0, _deadline - now) if phase in ["shop", "ready_wait"] or (phase == "spectating" and state.phase == "shop") else 0.0
 
@@ -188,6 +200,8 @@ func handle(from: int, msg: Dictionary) -> void:
 				phase = "starting"
 				round_n = 1
 				state.lobby_seed = int(b.lobby_seed)
+				if is_dedicated_spectator():
+					_become_spectator(false)           # v0.7.0: watches from round 1, never plays
 				match_started.emit(int(b.lobby_seed))
 		P.ROUND_OPEN:
 			_on_round_open(int(b.round), float(b.seconds))
@@ -320,12 +334,14 @@ func _take_state(d: Dictionary, force := false) -> void:
 		stats.stale_dropped += 1
 
 
-func _become_spectator() -> void:
+## `out` = eliminated (the glue says so and offers the hub); false = a dedicated spectator.
+func _become_spectator(out := true) -> void:
 	phase = "spectating"
 	_last_ready = {}
 	var alive: Array = spectate_targets()
 	spectate_target = alive[0] if not alive.is_empty() else 0
-	eliminated.emit()
+	if out:
+		eliminated.emit()
 
 
 ## Authoritative snapshot: rejoin catch-up, confirmed rounds, after a host migration.
@@ -382,6 +398,8 @@ func _on_sync(s: Dictionary) -> void:
 	if seat.get("status", "") != LobbyState.ALIVE:
 		if phase != "spectating" and seat.get("status", "") == LobbyState.ELIMINATED:
 			_become_spectator()
+		elif phase != "spectating" and seat.get("status", "") == LobbyState.SPECTATOR:
+			_become_spectator(false)               # a dedicated spectator back after a crash / migration
 		round_n = maxi(round_n, r)
 		if ph == "battle":
 			inflight = s.inflight.duplicate()
@@ -486,7 +504,7 @@ func live_battle_time(id: int, r: int, speed: float) -> float:
 const SHOP_RESEND := 2.0
 
 
-func send_shop_view(r: int, view: Dictionary, sig := "") -> bool:
+func send_shop_view(r: int, view: Dictionary, sig := "", chest := "") -> bool:
 	if not in_match() or phase == "spectating":
 		return false
 	var raw := var_to_bytes(view)
@@ -496,7 +514,7 @@ func send_shop_view(r: int, view: Dictionary, sig := "") -> bool:
 	if h != _shop_hash:
 		shop_seq += 1
 		if shop_sent_log.size() < SHOP_LOG_CAP:
-			shop_sent_log.append([r, shop_seq, h.substr(0, 16), Time.get_unix_time_from_system(), sig])
+			shop_sent_log.append([r, shop_seq, h.substr(0, 16), Time.get_unix_time_from_system(), sig, chest])
 	_shop_hash = h
 	_shop_sent_at = now
 	_send(P.SHOP_VIEW, {"round": r, "seq": shop_seq, "data": raw.compress(FileAccess.COMPRESSION_ZSTD), "raw": raw.size()})
