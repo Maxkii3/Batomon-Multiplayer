@@ -72,6 +72,10 @@ Everyone needs BatoMulti installed (same version) and Steam running.
 3. Only if the setup had set another mod aside: copy everything inside
    `%LOCALAPPDATA%\BatoMulti\parked\<id>\files\` back into the game folder.
 
+**Integrity check.** BatoMulti checks its own files every time the game starts. If any of its
+files were edited, it switches itself off (the game then runs normally, without multiplayer) and
+shows a short notice. Fix: download the setup again from the official release and reinstall.
+
 **Back to pure vanilla**
 
 Delete `batomulti`, `override.cfg` (and any other mod's folder) as above, then in Steam: right-click

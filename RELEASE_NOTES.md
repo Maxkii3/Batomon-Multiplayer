@@ -33,6 +33,10 @@ Close the game and run the same file again (or `BatoMulti-Setup-0.6.0.cmd uninst
 Manual removal and going back to pure vanilla (Steam → Verify integrity of game files): see
 [How to uninstall](https://github.com/Maxkii3/Batomon-Multiplayer#-how-to-uninstall) in the README.
 
+**Integrity check.** BatoMulti checks its own files every time the game starts. If any of its
+files were edited, it switches itself off (the game then runs normally, without multiplayer) and
+shows a short notice. Fix: download the setup again from the official release and reinstall.
+
 ## ⚠️ Unofficial mod — disclaimer
 
 **BatoMulti is an UNOFFICIAL, third-party community mod.** It is not made, affiliated with,

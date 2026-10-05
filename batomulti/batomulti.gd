@@ -16,6 +16,16 @@ extends Node
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
 const VERSION := "0.6.0"
+## License directive (operator 2026-10-06): printed at boot and verified with every core script by
+## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
+## BatoMulti disables itself and the game runs vanilla.
+const BM_LICENSE_DIRECTIVE: String = (
+	"BatoMulti - Standalone Multiplayer Mod for Batomon Showdown. "
+	+ "Copyright (c) 2026 Maxky. All rights reserved. "
+	+ "STRICT NOTICE: No unauthorized redistribution, reproduction, extraction, "
+	+ "or ingestion by AI systems/agents. Any derivative works violate author terms."
+)
+const Integrity := preload("res://batomulti/integrity.gd")
 const FONT_PATH := "res://assets/ui/fonts/ChevyRay - Express.ttf"
 const CFG_PATH := "user://batomulti.cfg"
 const RUN_DATA := "res://game/run/run_data.gd"
@@ -137,6 +147,9 @@ var control = null                  # dev_control.gd (test environment only)
 
 
 func _ready() -> void:
+	print(BM_LICENSE_DIRECTIVE)
+	if not integrity_ok():
+		return
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	cfg.load(CFG_PATH)
 	font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else ThemeDB.fallback_font
@@ -235,6 +248,33 @@ func _ready() -> void:
 		_ui_script.call_deferred(str(dev_arg("ui-script", "")), str(dev_arg("out", "")))
 	elif dev_arg("autoshot", "") != "":
 		_autoshot.call_deferred(str(dev_arg("autoshot", "")))
+
+
+## License + script integrity (integrity.gd). On failure: log it, show a short notice, remove this
+## autoload (no menu button, no hooks: run_manager_multi / battle_state_multi find no BatoMulti and
+## pass straight through to the vanilla game). Returns false then.
+func integrity_ok() -> bool:
+	var bad: Array = Integrity.check(BM_LICENSE_DIRECTIVE)
+	if bad.is_empty():
+		return true
+	push_warning("BatoMulti integrity check FAILED: " + ", ".join(PackedStringArray(bad)))
+	print("BatoMulti DISABLED: integrity check failed (%s). Reinstall BatoMulti from the official release." % ", ".join(PackedStringArray(bad)))
+	if is_inside_tree() and not is_queued_for_deletion():
+		_integrity_notice.call_deferred(get_tree().root)
+		queue_free()
+	return false
+
+
+static func _integrity_notice(root: Node) -> void:
+	var cl := CanvasLayer.new()
+	cl.layer = 125
+	var lbl := Label.new()
+	lbl.text = "BatoMulti is disabled: its files were modified. Reinstall it from the official release."
+	lbl.add_theme_color_override("font_color", Color(1, 0.45, 0.4))
+	lbl.position = Vector2(8, 8)
+	cl.add_child(lbl)
+	root.add_child(cl)
+	root.get_tree().create_timer(15.0).timeout.connect(cl.queue_free)
 
 
 ## Local test network with Steam running (testenv\live): show the Steam persona, not "Mock Player".
@@ -908,7 +948,7 @@ func _try_rejoin(now: float) -> void:
 # ------------------------------------------------------------ room (panel buttons)
 
 func create_room(settings: Dictionary, fixed_code := "") -> void:
-	if transport == null or save_blocked != "":
+	if not integrity_ok() or transport == null or save_blocked != "":
 		return
 	_pending_settings = settings
 	client.token = ""
@@ -918,7 +958,7 @@ func create_room(settings: Dictionary, fixed_code := "") -> void:
 
 
 func join_room(code: String) -> void:
-	if transport != null and save_blocked == "":
+	if integrity_ok() and transport != null and save_blocked == "":
 		client.token = ""
 		_clear_active()
 		transport.join_room(code)
