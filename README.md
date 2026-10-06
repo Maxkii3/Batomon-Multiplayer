@@ -4,7 +4,7 @@
 
 <div align="center">
   <a href="https://www.gsttopup.com/shop" target="_blank">
-    <img src="docs/assets/gst_topup_logo.png" alt="GST Topup" width="320"/>
+    <img src="docs/assets/gst_topup_logo.png" alt="GST Topup" width="280"/>
   </a>
   <br/>
   <sub>🎮 <b>Sponsored by / สนับสนุนโดย:</b> <a href="https://www.gsttopup.com/shop">GST Topup</a></sub>
