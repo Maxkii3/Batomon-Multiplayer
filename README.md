@@ -1,9 +1,29 @@
 # BatoMulti
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
+
 **Play Batomon Showdown with your friends — at the same time, in a private room.**
 
 One player creates a room and shares a short code. Everyone builds their team in the shop at the
 same time, then you battle each other round after round until only one trainer is left standing.
+
+---
+
+## 📸 Preview
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/01_main_menu.png" alt="Main menu with the Multiplayer button"><br><sub><b>Main menu</b> — BatoMulti adds a <b>Multiplayer</b> button.</sub></td>
+    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Lobby with room code, host settings and the Player / Spectator list"><br><sub><b>Lobby</b> — room code, host settings, and the room list with <b>Player / Spectator</b> roles.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/03_gameplay_match.png" alt="A live battle in round 3 with the leaderboard"><br><sub><b>Match</b> — everyone battles at the same time; the live leaderboard tracks lives and wins.</sub></td>
+    <td width="50%"><img src="docs/screenshots/04_eliminated.png" alt="The elimination card with Spectate buttons"><br><sub><b>Knocked out</b> — keep watching: follow the match or pick a player.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/05_spectator_mode.png" alt="Spectator mode watching a live battle"><br><sub><b>Spectator mode</b> — watch any player's shop and battles live, full screen; switch with &lt; &gt;.</sub></td>
+  </tr>
+</table>
 
 ---
 
