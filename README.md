@@ -2,6 +2,16 @@
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
 
+<div align="center">
+  <a href="https://www.gsttopup.com/shop" target="_blank">
+    <img src="docs/assets/gst_topup_logo.png" alt="GST Topup" width="320"/>
+  </a>
+  <br/>
+  <sub>🎮 <b>Sponsored by / สนับสนุนโดย:</b> <a href="https://www.gsttopup.com/shop">GST Topup</a></sub>
+  <br/>
+  <sub><b>TH:</b> เติมเกมถูก รวดเร็ว ปลอดภัย แนะนำที่ GST Topup | <b>EN:</b> Affordable, fast, and secure game top-ups at GST Topup</sub>
+</div>
+
 **Play Batomon Showdown with your friends — at the same time, in a private room.**
 
 One player creates a room and shares a short code. Everyone builds their team in the shop at the
