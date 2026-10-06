@@ -51,7 +51,7 @@ same time, then you battle each other round after round until only one trainer i
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.3.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.4.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -72,8 +72,8 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 Everyone needs BatoMulti installed (same version) and Steam running.
 
-- **Host:** Multiplayer → pick the shop timer, lives and battle speed → **Create room** → send the
-  6-letter code to your friends → **Start match** once everyone shows up.
+- **Host:** Multiplayer → pick the shop timer, lives and battle speed → keep the random **room
+  code** or type your own (4-8 letters / digits) → **Create room** → send the code to your friends → **Start match** once everyone shows up.
 - **Friends:** Multiplayer → type the code → **Join**.
 - **Player or Spectator:** the room list on the right of the lobby shows everyone. Press your own
   **Player / Spectator** button to switch; the host can switch anyone. Roles lock when the match
@@ -87,12 +87,12 @@ Everyone needs BatoMulti installed (same version) and Steam running.
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.3.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.4.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.3.cmd uninstall
-   BatoMulti-Setup-0.6.3.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.3.cmd status
+   BatoMulti-Setup-0.6.4.cmd uninstall
+   BatoMulti-Setup-0.6.4.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.4.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

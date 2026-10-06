@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.3"
+const VERSION := "0.6.4"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -1067,7 +1067,10 @@ func create_room(settings: Dictionary, fixed_code := "") -> void:
 	_pending_settings = settings
 	client.token = ""
 	_clear_active()                                    # a new room gives the old match up
-	var code := fixed_code if fixed_code != "" else str(dev_arg("room", RoomCode.generate()))
+	var code := RoomCode.normalize(fixed_code if fixed_code != "" else str(dev_arg("room", RoomCode.generate())))
+	if code == "":
+		_status(RoomCode.BAD, true)
+		return
 	transport.create_room(code, int(settings.get("max_players", 8)))
 
 

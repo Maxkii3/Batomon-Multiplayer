@@ -27,6 +27,7 @@ extends "res://batomulti/transport.gd"
 
 signal connection_lost(why: String)
 
+const RoomCode := preload("res://batomulti/room_code.gd")
 const BASE_PORT := 47100
 const MAX_FRAME := 4 * 1024 * 1024
 
@@ -107,6 +108,9 @@ func _write_room_file() -> bool:
 # ------------------------------------------------------------ room
 
 func create_room(room_code: String, _max_players: int) -> void:
+	if _room_live(room_code):
+		room_failed.emit(RoomCode.IN_USE)
+		return
 	code = room_code
 	last_code = room_code
 	_host = self_id
@@ -118,6 +122,28 @@ func create_room(room_code: String, _max_players: int) -> void:
 		return
 	room_ready.emit(code)
 	members_changed.emit()
+
+
+## A room file whose host still accepts connections (a killed test run leaves a stale file behind:
+## that one doesn't count).
+func _room_live(room_code: String) -> bool:
+	var f := FileAccess.open(_room_file(room_code), FileAccess.READ)
+	if f == null:
+		return false
+	var parts := f.get_as_text().strip_edges().split(" ")
+	f.close()
+	if parts.size() != 2 or int(parts[1]) == port:
+		return false
+	var conn := StreamPeerTCP.new()
+	if conn.connect_to_host("127.0.0.1", int(parts[1])) != OK:
+		return false
+	var t0 := Time.get_ticks_msec()
+	while conn.get_status() == StreamPeerTCP.STATUS_CONNECTING and Time.get_ticks_msec() - t0 < 300:
+		conn.poll()
+		OS.delay_msec(5)
+	var live := conn.get_status() == StreamPeerTCP.STATUS_CONNECTED
+	conn.disconnect_from_host()
+	return live
 
 
 func join_room(room_code: String) -> void:

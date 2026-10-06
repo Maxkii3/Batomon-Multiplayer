@@ -10,7 +10,8 @@
 # ==============================================================================
 extends PanelContainer
 ## Lobby panel (doc/architecture.md §6). Opened from the main menu's "Multiplayer" button as a
-## centred modal, or with F1 during a match. Create a room (host settings) or join by code,
+## centred modal, or with F1 during a match. Create a room (host settings, editable room code:
+## random by default, 4-8 x A-Z/0-9; a code another live room uses is refused) or join by code,
 ## member list, Start (host), Leave, Return to main menu (ends the lobby run), Close.
 ## Room sidebar (2026-10-06): everyone in the room with a Player / Spectator role button. A member
 ## switches only its own role; the host may switch anyone (the host checks it again). Spectators never
@@ -34,6 +35,7 @@ var _code_label: Label
 var _status: Label
 var _members: Label
 var _join_edit: LineEdit
+var _room_edit: LineEdit             # the code "Create room" uses (prefilled with a random one)
 var _minutes: SpinBox
 var _lives: SpinBox
 var _tie: OptionButton
@@ -86,8 +88,17 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_close_btn = _button("Close", func(): hub.close_lobby())
 	head.add_child(_close_btn)
 	vb.add_child(head)
+	var code_row := HBoxContainer.new()
 	_code_label = _label("", COL_TEXT)
-	vb.add_child(_code_label)
+	code_row.add_child(_code_label)
+	_room_edit = _code_edit("ABC234", 0)              # no hard cap: a paste is filtered first, then cut to 8
+	_room_edit.custom_minimum_size = Vector2(72, 0)
+	_room_edit.text = RoomCode.sanitize(str(hub.dev_arg("room", RoomCode.generate())))
+	_room_edit.tooltip_text = "Your room code: keep the random one or type your own (4-8 letters / digits)."
+	_room_edit.text_changed.connect(_on_room_edit_changed)
+	_room_edit.text_submitted.connect(func(_t): _create())
+	code_row.add_child(_room_edit)
+	vb.add_child(code_row)
 
 	vb.add_child(_label("Host settings", COL_DIM))
 	var host_row := HBoxContainer.new()
@@ -122,17 +133,11 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_speed.item_selected.connect(func(_i): _push_settings())
 
 	var btns := HBoxContainer.new()
-	_create_btn = _button("Create room", func(): hub.create_room(settings()))
+	_create_btn = _button("Create room", func(): _create())
 	btns.add_child(_create_btn)
 	btns.add_child(_label("  or code", COL_DIM))
-	_join_edit = LineEdit.new()
-	_join_edit.placeholder_text = "ABC234"
+	_join_edit = _code_edit("ABC234", RoomCode.MAX_LEN + 2)
 	_join_edit.custom_minimum_size = Vector2(64, 0)
-	_join_edit.max_length = 9
-	_join_edit.add_theme_font_override("font", font)
-	_join_edit.add_theme_font_size_override("font_size", font_size)
-	_join_edit.focus_entered.connect(_mute_game_keys.bind(true))
-	_join_edit.focus_exited.connect(_mute_game_keys.bind(false))
 	_join_edit.text_submitted.connect(func(_t): _join())
 	btns.add_child(_join_edit)
 	_join_btn = _button("Join", func(): _join())
@@ -170,10 +175,28 @@ func _push_settings() -> void:
 		hub.host.configure(settings())
 
 
+## Live filter: upper case, only A-Z / 0-9, at most 8 (the caret stays where the player typed).
+func _on_room_edit_changed(t: String) -> void:
+	var s := RoomCode.sanitize(t)
+	if s != t:
+		var caret := mini(_room_edit.caret_column, s.length())
+		_room_edit.text = s
+		_room_edit.caret_column = caret
+
+
+func _create() -> void:
+	var c := RoomCode.normalize(_room_edit.text)
+	if c == "":
+		set_status(RoomCode.BAD, true)
+		return
+	_room_edit.release_focus()
+	hub.create_room(settings(), c)
+
+
 func _join() -> void:
 	var c := RoomCode.normalize(_join_edit.text)
 	if c == "":
-		set_status("A room code has 6 letters/digits (it never contains 0, O, 1 or I).", true)
+		set_status(RoomCode.BAD, true)
 		return
 	_join_edit.release_focus()
 	hub.join_room(c)
@@ -194,7 +217,9 @@ func refresh() -> void:
 	var on_menu: bool = hub.on_title_screen()
 	var can_enter: bool = t != null and not in_room and on_menu and hub.save_blocked == ""
 	_title.text = "Multiplayer" + ("  (local test network)" if hub.transport_kind == "mock" else "")
-	_code_label.text = "Room code: %s" % t.code if in_room else "Not in a room"
+	_code_label.text = "Room code: %s" % t.code if in_room else "Room code"
+	_room_edit.visible = not in_room
+	_room_edit.editable = can_enter
 	_create_btn.disabled = not can_enter
 	_join_btn.disabled = not can_enter
 	_join_edit.editable = can_enter
@@ -295,6 +320,17 @@ func _mute_game_keys(on: bool) -> void:
 
 func _exit_tree() -> void:
 	_mute_game_keys(false)
+
+
+func _code_edit(placeholder: String, max_len: int) -> LineEdit:
+	var e := LineEdit.new()
+	e.placeholder_text = placeholder
+	e.max_length = max_len
+	e.add_theme_font_override("font", font)
+	e.add_theme_font_size_override("font_size", font_size)
+	e.focus_entered.connect(_mute_game_keys.bind(true))
+	e.focus_exited.connect(_mute_game_keys.bind(false))
+	return e
 
 
 func _label(text: String, col: Color) -> Label:

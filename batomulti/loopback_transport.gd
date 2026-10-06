@@ -11,6 +11,8 @@
 extends "res://batomulti/transport.gd"
 ## In-process transport for the harness: every player is a LoopbackTransport on one LoopbackHub.
 
+const RoomCode := preload("res://batomulti/room_code.gd")
+
 ## Shared "network" for loopback transports. pump() delivers queued messages (tests call it to
 ## step the simulated network; nothing is delivered synchronously, like the real thing).
 class LoopbackHub extends RefCounted:
@@ -79,6 +81,9 @@ func send(to_id: int, bytes: PackedByteArray) -> void:
 	hub.queue.append([to_id, self_id, bytes])
 
 func create_room(room_code: String, _max_players: int) -> void:
+	if hub.rooms.has(room_code) and not hub.rooms[room_code].members.is_empty():
+		room_failed.emit(RoomCode.IN_USE)
+		return
 	code = room_code
 	hub.rooms[code] = {"host": self_id, "members": [self_id]}
 	room_ready.emit(code)

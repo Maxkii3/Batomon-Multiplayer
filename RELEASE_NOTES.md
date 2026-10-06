@@ -1,17 +1,26 @@
-# BatoMulti 0.6.3 — play with your friends!
+# BatoMulti 0.6.4 — play with your friends!
 
 Batomon Showdown, multiplayer: create a private room, share the code, and battle your friends round
 after round until one trainer is left.
 
-## New in this build (0.6.3)
+## New in this build (0.6.4)
+
+- ✏️ **Pick your own room code.** The lobby's room code is now a text field: keep the random code or
+  type your own — 4 to 8 letters and digits (A-Z, 0-9; typed letters become capitals, anything else
+  is dropped). Friends join with exactly that code.
+- 🚫 **No duplicate rooms.** Before a room is created, BatoMulti checks Steam for a live room with the
+  same code. If one exists you see *"Room code already in use. Please choose another code."* and
+  nothing is created — pick another code.
+- 🔄 **On 0.6.2 or 0.6.3? Update from the main menu.** Start the game: the banner offers 0.6.4 →
+  **[Update Now]** → **[Restart Now]**. On 0.6.1 or older, run this setup file once by hand.
+- 🤝 **Everyone in a room needs 0.6.4.** A room only accepts players with exactly the same BatoMulti
+  version, so 0.6.3 and older can't join a 0.6.4 room (and the other way round).
+
+## In 0.6.3
 
 - 🎁 **Spectator gift-box fix.** Switching to another player while watching now always shows *their*
   gift box exactly as they see it (it could keep showing the previous player's opened box), and a
   gift box with a single trinket now shows when it has been taken.
-- 🔄 **On 0.6.2? Update from the main menu.** Start the game: the banner offers 0.6.3 →
-  **[Update Now]** → **[Restart Now]**. On 0.6.1 or older, run this setup file once by hand.
-- 🤝 **Everyone in a room needs 0.6.3.** A room only accepts players with exactly the same BatoMulti
-  version, so 0.6.2 and older can't join a 0.6.3 room (and the other way round).
 
 ## Since 0.6.2
 
@@ -35,7 +44,7 @@ after round until one trainer is left.
 
 ## Install in 3 steps
 
-1. Download **`BatoMulti-Setup-0.6.3.cmd`** below.
+1. Download **`BatoMulti-Setup-0.6.4.cmd`** below.
 2. Close the game and **double-click the file** (press Enter to confirm). It finds your game and
    handles backups for you.
 3. Start Batomon Showdown through Steam → **Multiplayer** → create or join a room.
@@ -45,7 +54,7 @@ and restored exactly as it was when you uninstall.
 
 ## What's inside
 
-- 🔑 **Private rooms** with a 6-letter code
+- 🔑 **Private rooms** with a room code (random, or your own 4-8 letters / digits)
 - ⏩ **Battle speed** 1x / 2x / 4x, chosen by the host
 - 💔 **Revamped Second Chance** — come back with 1 life and pick: Board Upgrade, Element Infusion,
   a Legendary/Mythical Trinket, or Scaling Gold
@@ -59,7 +68,7 @@ Everyone in the room needs the same BatoMulti version. Windows + Steam version o
 
 ## Uninstall
 
-Close the game and run the same file again (or `BatoMulti-Setup-0.6.3.cmd uninstall`).
+Close the game and run the same file again (or `BatoMulti-Setup-0.6.4.cmd uninstall`).
 Manual removal and going back to pure vanilla (Steam → Verify integrity of game files): see
 [How to uninstall](https://github.com/Maxkii3/Batomon-Multiplayer#-how-to-uninstall) in the README.
 

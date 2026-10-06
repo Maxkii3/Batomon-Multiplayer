@@ -21,11 +21,16 @@ extends "res://batomulti/transport.gd"
 ## (setLobbyOwner), which then republishes bm_host for players who rejoin by code.
 
 const Protocol := preload("res://batomulti/protocol.gd")
+const RoomCode := preload("res://batomulti/room_code.gd")
 const MAX_PER_POLL := 64
+const CHECK_TIMEOUT_MS := 6000
 
 var _steam = null
 var _lobby_id := 0
 var _pending_code := ""
+var _checking := false               # create_room: lobby-list search for the code before createLobby
+var _check_max := 0
+var _check_at := 0
 var _avatars: Dictionary = {}      # id -> ImageTexture
 var _authority := 0
 var _owner_sync_at := 0
@@ -64,9 +69,29 @@ func _const(name: String, fallback: int) -> int:
 
 # ------------------------------------------------------------ room
 
+## The code must not belong to another live BatoMulti lobby (joiners take the first hit), so the
+## lobby list is searched for it first; createLobby only runs when nobody has it.
 func create_room(room_code: String, max_players: int) -> void:
 	_pending_code = room_code
-	_steam.createLobby(_const("LOBBY_TYPE_INVISIBLE", 3), max_players)
+	_checking = true
+	_check_max = max_players
+	_check_at = Time.get_ticks_msec()
+	_request_code_list(room_code)
+
+
+func _request_code_list(room_code: String) -> void:
+	_steam.addRequestLobbyListStringFilter("bm_code", room_code, _const("LOBBY_COMPARISON_EQUAL", 0))
+	_steam.addRequestLobbyListDistanceFilter(_const("LOBBY_DISTANCE_FILTER_WORLDWIDE", 3))
+	_steam.requestLobbyList()
+
+
+## Lobby-list answer for create_room. taken = the code was found on another lobby.
+func _finish_check(taken: bool) -> void:
+	_checking = false
+	if taken:
+		room_failed.emit(RoomCode.IN_USE)
+	else:
+		_steam.createLobby(_const("LOBBY_TYPE_INVISIBLE", 3), _check_max)
 
 
 func _on_lobby_created(result: int, lobby_id: int) -> void:
@@ -87,12 +112,18 @@ func _on_lobby_created(result: int, lobby_id: int) -> void:
 
 func join_room(room_code: String) -> void:
 	_pending_code = room_code
-	_steam.addRequestLobbyListStringFilter("bm_code", room_code, _const("LOBBY_COMPARISON_EQUAL", 0))
-	_steam.addRequestLobbyListDistanceFilter(_const("LOBBY_DISTANCE_FILTER_WORLDWIDE", 3))
-	_steam.requestLobbyList()
+	_checking = false
+	_request_code_list(room_code)
 
 
 func _on_lobby_match_list(lobbies: Array) -> void:
+	if _checking:
+		var taken := false
+		for l in lobbies:
+			if int(l) != _lobby_id and str(_steam.getLobbyData(int(l), "bm_code")) == _pending_code:
+				taken = true
+		_finish_check(taken)
+		return
 	for l in lobbies:
 		if str(_steam.getLobbyData(int(l), "bm_code")) == _pending_code:
 			_steam.joinLobby(int(l))
@@ -186,6 +217,8 @@ func _on_session_request(remote_id) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _checking and Time.get_ticks_msec() - _check_at > CHECK_TIMEOUT_MS:
+		_finish_check(false)             # no lobby-list answer: never block creating a room on it
 	if _steam == null or _lobby_id == 0:
 		return
 	if Time.get_ticks_msec() > _owner_sync_at:
