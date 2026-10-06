@@ -15,9 +15,9 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "7415de38168c8e1ad0e3c38841336110a57618e510af030632d6b18817a59eb8"
-const SELF_SHA256 := "d4972e213687919eeab3e6ec97dc766cbb403f61613022d7a487271df6b999f2"
+const SELF_SHA256 := "f60fff0d6b6ec3adc3b8666aee26a7c72d4f1b2af6e0c89b9ecfebde53c5f674"
 const MANIFEST := {
-	"batomulti.gd": "336b55ab56ad14909749932ca09d3da67c93ff875d7191d53ba80cb9bb208d3b",
+	"batomulti.gd": "3668e841a2f91482eca7317e68505f9ac289464b591bc7e693a3041912ad639a",
 	"battle_state_multi.gd": "abd064caf08970e451b819a1fd1ef2d757eb59fc16c5f3fd142f22b8ed261877",
 	"battle_view_mirror.gd": "7e2d40ac7b173dbefffedaaaeb3322e23444c9f24f2ff47ab82022fc6a31ad48",
 	"canonical_battle.gd": "facb8ea3eda7dc95c681dd770c2cdc1a9a8435be39b14231cfd25504547155a8",
@@ -40,7 +40,7 @@ const MANIFEST := {
 	"room_code.gd": "6b09a9de7d5abb5d4e82d2f2b33604b13cb1309efb1535d990f0772c30d54594",
 	"run_manager_multi.gd": "eeeab9f4a38e4a3a9b8864ab1734dc5571822dc49537a5f61e5ef1640660511b",
 	"scout_view.gd": "82bba33fdb5ab3f2972b3e5128560ea05f4baa169d9b422b0c37aab0f1b11c9f",
-	"spectate_broadcast.gd": "14d11b5d4192b7b65fac176d7a7853be1e5c127d429e2a756ccf96b88eba9e6e",
+	"spectate_broadcast.gd": "da197a0be7e86178e3cc09332f28e3adf2363109e66e23bdd951ceeb09ec5627",
 	"spectator_view.gd": "171718d0a6c350e838d4eb407af4d6e4c80ed84f2046f257443806fe63ca8b8b",
 	"steam_transport.gd": "355ce48c2364dfb3bbeafac578976aefb1273a844f2ebec0c311aa1923fbc7a1",
 	"transport.gd": "0df7bec8801685e96ba29601cb1c6aee51cc1a2d60b6010eb1e02eb848f9602e",

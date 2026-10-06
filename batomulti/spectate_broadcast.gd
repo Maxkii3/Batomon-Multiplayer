@@ -48,7 +48,7 @@ var frozen := false                 # the watched player's shop is frozen for ne
 var ready_flag := false             # the watched player pressed Battle (waiting for the room)
 var renders := 0                    # tests / live: re-renders
 var chest: Dictionary = {}          # the watched player's chest as last rendered ({} = none)
-var chest_key := ""                 # chest on screen ("" = none)
+var chest_key := ""                 # chest on screen: "<watched id>#<their chest key>" ("" = none)
 var chest_stage := ""               # what the popup shows: "closed" | "open" | "picked"
 var chest_pick := ""
 var chest_renders := 0              # tests / live: chest versions rendered
@@ -129,9 +129,9 @@ func rendered_chest_sig() -> String:
 	var pick := ""
 	if stage == "picked":
 		pick = str(lit[0])
-	elif stage == "open" and chest_pick == "*all" and chest_stage == "picked":
-		stage = "picked"                                   # took every option: all stay lit
-		pick = "*all"
+	elif stage == "open" and chest_stage == "picked" and (chest_pick == "*all" or ids.size() == 1):
+		stage = "picked"                                   # every card stays lit: took them all, or the only one
+		pick = "*all" if chest_pick == "*all" else str(lit[0])
 	return "%s|%s|%s" % [",".join(ids), stage, pick]
 
 
@@ -300,8 +300,14 @@ func _render_chest(ch: Dictionary) -> void:
 		return
 	var st := str(ch.get("stage", "closed"))
 	var late := false                                  # switched in after the box was opened: no animations
-	if str(ch.get("key", "")) != chest_key:
-		chest_key = str(ch.get("key", ""))
+	# keys are per player ("<that player's chest count>:<options>"): two players can send the same one, so
+	# the chest on screen is also identified by whose it is (live 2026-10-06: a channel switch kept the
+	# first player's open box for the second player's closed one). A stage going BACK (open -> closed)
+	# for the same chest cannot be animated forward either: rebuild it.
+	var ck := "%d#%s" % [shown_id, str(ch.get("key", ""))]
+	var back: bool = st == "closed" and chest_stage in ["opening", "open", "picked"]
+	if ck != chest_key or back:
+		chest_key = ck
 		chest_stage = ""
 		chest_pick = ""
 		var opts: Array = []
