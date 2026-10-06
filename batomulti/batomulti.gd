@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.1"
+const VERSION := "0.6.2"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -44,6 +44,7 @@ const ElimHub := preload("res://batomulti/elimination_hub.gd")
 const NextMatchBar := preload("res://batomulti/next_match_bar.gd")
 const ScoutView := preload("res://batomulti/scout_view.gd")
 const ResultsView := preload("res://batomulti/results_view.gd")
+const Updater := preload("res://batomulti/updater.gd")
 const Comeback := preload("res://batomulti/comeback.gd")
 const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
 const BattleViewMirror := preload("res://batomulti/battle_view_mirror.gd")
@@ -94,6 +95,7 @@ var next_seen: Dictionary = {}      # round -> [opp, ghost] the NEXT MATCH bar s
 var next_checks: Array = []         # [round, shown opp, real opp, shown ghost, real ghost] per battle
 var scout                           # scout_view.gd: another player's last board (leaderboard row click)
 var results                         # results_view.gd: end-of-match placements + Return to main menu
+var updater                         # updater.gd: GitHub release check + main-menu banner + restart helper
 var font: Font
 var title_state = null              # the game's title screen while it exists
 var menu_button: Button = null
@@ -247,6 +249,23 @@ func _ready() -> void:
 	results.setup(client, transport, font, 8)
 	results.return_pressed.connect(return_to_menu)
 	layer.add_child(results)                            # topmost: the match is over
+	updater = Updater.new()
+	updater.name = "BatoMultiUpdater"
+	var upd_dir := ""                                     # tests: never the real %TEMP%\BatoMulti-Update
+	if bool(ProjectSettings.get_setting("batomulti/allow_mock", false)):
+		upd_dir = str(dev_arg("update-dir", "user://bm_update"))
+	updater.setup(self, font, 8, str(dev_arg("fake-version", VERSION)), upd_dir)
+	layer.add_child(updater)
+	if updates_enabled():
+		updater.auto = bool(dev_arg("update-auto", false))
+		updater.api_base = str(dev_arg("update-api", ""))
+		updater.shot_path = str(dev_arg("update-shot", ""))
+		updater.force_child = bool(dev_arg("update-child", false))
+		updater.demo_dir = str(dev_arg("update-demo", ""))
+		updater.demo_hold = float(str(dev_arg("update-hold", "4")))
+		if updater.demo_dir != "" and updater.notice != "":
+			updater._demo_notice.call_deferred()
+		updater.check_soon()
 
 	get_tree().node_added.connect(_on_node_added)
 	for n in get_tree().root.find_children("*", "Node", true, false):
@@ -264,6 +283,17 @@ func _ready() -> void:
 		_ui_script.call_deferred(str(dev_arg("ui-script", "")), str(dev_arg("out", "")))
 	elif dev_arg("autoshot", "") != "":
 		_autoshot.call_deferred(str(dev_arg("autoshot", "")))
+
+
+## The boot-time update check: real installs (cfg [update] check, default on); the test environment
+## (allow_mock) only with --bm-update-check, so tests and bots never call GitHub. A copy that could not
+## apply an update anyway (no game pck next to the exe: the harness, the editor) never checks.
+func updates_enabled() -> bool:
+	if updater == null or not updater.can_apply():
+		return false
+	if bool(ProjectSettings.get_setting("batomulti/allow_mock", false)):
+		return bool(dev_arg("update-check", false))
+	return bool(cfg.get_value("update", "check", true))
 
 
 ## License + script integrity (integrity.gd). On failure: log it, show a short notice, remove this

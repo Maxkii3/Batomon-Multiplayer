@@ -15,9 +15,9 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "7415de38168c8e1ad0e3c38841336110a57618e510af030632d6b18817a59eb8"
-const SELF_SHA256 := "c8ff16f5a84e0a89c250ec520d87f7d79c393f92d5344305539edc8d743435f7"
+const SELF_SHA256 := "d4972e213687919eeab3e6ec97dc766cbb403f61613022d7a487271df6b999f2"
 const MANIFEST := {
-	"batomulti.gd": "a8d2baf5a1313b594859bc60e11039bfadb0558b15a891267ea52385170249aa",
+	"batomulti.gd": "336b55ab56ad14909749932ca09d3da67c93ff875d7191d53ba80cb9bb208d3b",
 	"battle_state_multi.gd": "abd064caf08970e451b819a1fd1ef2d757eb59fc16c5f3fd142f22b8ed261877",
 	"battle_view_mirror.gd": "7e2d40ac7b173dbefffedaaaeb3322e23444c9f24f2ff47ab82022fc6a31ad48",
 	"canonical_battle.gd": "facb8ea3eda7dc95c681dd770c2cdc1a9a8435be39b14231cfd25504547155a8",
@@ -44,6 +44,7 @@ const MANIFEST := {
 	"spectator_view.gd": "171718d0a6c350e838d4eb407af4d6e4c80ed84f2046f257443806fe63ca8b8b",
 	"steam_transport.gd": "355ce48c2364dfb3bbeafac578976aefb1273a844f2ebec0c311aa1923fbc7a1",
 	"transport.gd": "0df7bec8801685e96ba29601cb1c6aee51cc1a2d60b6010eb1e02eb848f9602e",
+	"updater.gd": "5bcbcdb5cc134517978edd2b63002fca0c9bdbad5e07364ee7a02c4734fbb541",
 }
 
 

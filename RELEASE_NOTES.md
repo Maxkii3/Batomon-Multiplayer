@@ -1,23 +1,33 @@
-# BatoMulti 0.6.1 — play with your friends!
+# BatoMulti 0.6.2 — play with your friends!
 
 Batomon Showdown, multiplayer: create a private room, share the code, and battle your friends round
 after round until one trainer is left.
 
 ## New in this build
 
-- 👥 **Player / Spectator roles in the lobby.** A room list next to the lobby shows everyone in the
+- 🔄 **In-game updates.** From now on BatoMulti checks for a new version when the game starts. If there
+  is one, a small banner on the main menu says **"New version available"** with **[Update Now]** and
+  **[Later]**. Update Now downloads the new setup in the background and checks it against this release
+  page's SHA-256 fingerprint; then **[Restart Now]** closes the game, installs the update and starts
+  the game again. Offline or GitHub unreachable? Nothing is shown and you play as usual. Don't want
+  the check? Put `[update]` / `check=false` in `%APPDATA%\Godot\app_userdata\Batomon Showdown\batomulti.cfg`.
+- ⚠️ **One manual update needed.** 0.6.1 and older have no updater yet: run this setup file once by
+  hand (close the game, double-click it). Every update after 0.6.2 can be done from the main menu.
+- 👥 **Dedicated spectator slot — Player / Spectator roles in the lobby.** A room list next to the lobby shows everyone in the
   room with a **Player / Spectator** button. You can switch your own role; the host can switch
   anyone's. Spectators are never paired, never fight and don't appear in the standings. They watch
   the match full screen from round 1 and can switch between players at any time.
-- 🎁 **Watch gift boxes and chests live.** When the player you're watching gets a gift box (after a
-  battle or in the shop), you see the box drop and open, the same trinkets they're offered, and which
-  one they take.
-- 🔄 **Everyone in a room needs 0.6.1.** This build changed the room protocol, so a 0.6.0 install
-  can't join a 0.6.1 room. Run the new setup file once to update (your settings are kept).
+- 🎁 **Chest view in sync.** When the player you're watching gets a gift box (after a battle or in the
+  shop), you see the box drop and open, the same trinkets they're offered, and which one they take,
+  live.
+- 🖥️ **Spectator polish.** The spectator's battle screen draws both real teams (correct units,
+  levels and sides), personal buttons are hidden, and the spectator bar no longer overlaps.
+- 🤝 **Everyone in a room needs 0.6.2.** A room only accepts players with exactly the same BatoMulti
+  version, so 0.6.1 and older can't join a 0.6.2 room (and the other way round).
 
 ## Install in 3 steps
 
-1. Download **`BatoMulti-Setup-0.6.1.cmd`** below.
+1. Download **`BatoMulti-Setup-0.6.2.cmd`** below.
 2. Close the game and **double-click the file** (press Enter to confirm). It finds your game and
    handles backups for you.
 3. Start Batomon Showdown through Steam → **Multiplayer** → create or join a room.
@@ -41,7 +51,7 @@ Everyone in the room needs the same BatoMulti version. Windows + Steam version o
 
 ## Uninstall
 
-Close the game and run the same file again (or `BatoMulti-Setup-0.6.1.cmd uninstall`).
+Close the game and run the same file again (or `BatoMulti-Setup-0.6.2.cmd uninstall`).
 Manual removal and going back to pure vanilla (Steam → Verify integrity of game files): see
 [How to uninstall](https://github.com/Maxkii3/Batomon-Multiplayer#-how-to-uninstall) in the README.
 

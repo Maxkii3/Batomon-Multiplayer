@@ -31,7 +31,7 @@ same time, then you battle each other round after round until only one trainer i
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.1.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.2.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -41,6 +41,12 @@ same time, then you battle each other round after round until only one trainer i
 
 **To uninstall**, run the same file again. Your game (and any mod it set aside) goes back to how it
 was — details in [How to uninstall](#-how-to-uninstall).
+
+**Updates.** From 0.6.2 on, BatoMulti tells you on the main menu when a new version is out:
+**[Update Now]** downloads it (checked against the release's SHA-256), **[Restart Now]** installs it and
+restarts the game. Coming from 0.6.1 or older? Run the new setup file once by hand. No internet? The
+check stays silent and the game starts as usual. To turn the check off, add `[update]` and
+`check=false` to `%APPDATA%\Godot\app_userdata\Batomon Showdown\batomulti.cfg`.
 
 ## 🎮 How to play with friends
 
@@ -61,12 +67,12 @@ Everyone needs BatoMulti installed (same version) and Steam running.
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.1.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.2.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.1.cmd uninstall
-   BatoMulti-Setup-0.6.1.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.1.cmd status
+   BatoMulti-Setup-0.6.2.cmd uninstall
+   BatoMulti-Setup-0.6.2.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.2.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
