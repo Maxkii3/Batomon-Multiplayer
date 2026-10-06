@@ -15,7 +15,8 @@ extends RefCounted
 ## (art + music of the vanilla Second Chance). Four choices, operator spec 2026-10-05:
 ##   1 Board Upgrade   every board unit +1 level (cap 3)
 ##   2 Element Infusion one rolled core type -> one board unit the player picks
-##   3 Trinket         trinket gift: Legendary (tier 5) through Day 10, Mythical (tier 6) after
+##   3 Trinket         trinket gift, fixed tier by Day (operator 2026-10-06): Day 1-2 Common, 3-5 Rare,
+##                     6-10 Super Rare, 11-16 Legendary, 17+ Mythical (fewer than 3 candidates: next tier down)
 ##   4 Scaled Gold     10 + 5 x current round
 ## The rolls are seeded from the run id + round, so a rebuild (crash rejoin) offers the same event.
 
@@ -23,7 +24,8 @@ const ID := "bm_comeback"
 const VANILLA := "second_chance"
 const Opt := preload("res://batomulti/comeback_option.gd")
 const NOT_CORE := ["all", "null", "curio"]           # meta / special types, never rolled
-const MYTHIC_AFTER_DAY := 10
+## [first Day, tier] (Glossary tiers: 1 Common, 2 Uncommon, 3 Rare, 4 Super Rare, 5 Legendary, 6 Mythic)
+const TIER_BY_DAY := [[17, 6], [11, 5], [6, 4], [3, 3], [1, 1]]
 
 
 static func _db():
@@ -35,7 +37,10 @@ static func gold_for(round_n: int) -> int:
 
 
 static func tier_for(round_n: int) -> int:
-	return 6 if round_n > MYTHIC_AFTER_DAY else 5
+	for row in TIER_BY_DAY:
+		if round_n >= int(row[0]):
+			return int(row[1])
+	return 1
 
 
 ## Every core type in database order. Not filtered by the board (operator 2026-10-05: always offer

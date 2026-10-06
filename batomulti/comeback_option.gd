@@ -14,7 +14,7 @@ extends EventOption
 ## EventOption (event_state.gd -> RunManager.resolve_event_choice -> apply).
 ##   level    every unit on the board +1 level, capped at LEVEL_CAP
 ##   type     the rolled core type (type_id) on any one board unit the player picks (never hidden)
-##   treasure (shown as "Trinket") a trinket gift of `tier` (5 legendary, 6 mythic): the game's gift / OPEN screen
+##   treasure (shown as "Trinket") a trinket gift of `tier` (by Day: comeback.gd TIER_BY_DAY): the game's gift / OPEN screen
 ##   gold     `gold` coins at once
 
 const LEVEL_CAP := 3
@@ -76,16 +76,31 @@ func apply(run_data: RunData, target: MonsterInstance = null):
 			run_data.gold += gold
 
 
+const MIN_CHOICES := 3
+
+
+## The first tier from `start` down whose roll has at least `need` trinkets (operator 2026-10-06: fewer
+## than 3 candidates -> the next tier down). No tier has enough: the best non-empty roll, highest tier.
+static func pick_options(roll: Callable, start: int, need: int) -> Array:
+	var best: Array = []
+	var t := start
+	while t >= 1:
+		var o: Array = roll.call(t)
+		if o.size() >= need:
+			return o
+		if best.is_empty() and not o.is_empty():
+			best = o
+		t -= 1
+	return best
+
+
 ## Like the game's GiftTrinketEventOption with a fixed tier: pending_reward -> trinket_select.
 func _offer_treasure(run_data: RunData) -> void:
 	var db = _db()
 	var exclude = run_data.get_unique_trinket_exclusions()
 	var count: int = run_data.get_gift_choice_count(3)
-	var options: Array = []
-	var t := tier
-	while options.is_empty() and t >= 1:
-		options = db.get_random_trinkets_by_tier(t, count, exclude, run_data, run_data.next_run_rng())
-		t -= 1                                         # a set without tier-t trinkets: next tier down
+	var options: Array = pick_options(func(t): return db.get_random_trinkets_by_tier(t, count, exclude, run_data, run_data.next_run_rng()),
+		tier, mini(MIN_CHOICES, count))
 	if options.is_empty():
 		run_data.gold += 10 + 5 * int(run_data.current_round)   # nothing to offer: the gold instead
 		return

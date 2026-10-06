@@ -15,19 +15,19 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "26eb5d35bf65db2bffb10acbc91a8f44edabea6fbc74fb109fe93f3bd0c22181"
+const SELF_SHA256 := "0f0802d4d4b663fa9aff70a012c46cfcdeae5cbe17c89aa9552e14816944c5be"
 const MANIFEST := {
-	"batomulti.gd": "00d18be5b7d93b9062703cc93fc5b76d492e5423dddb3e45937282d62eac8f45",
+	"batomulti.gd": "a39b67d857ac83029f76500d72a3d4b51446a4e22cc4ccd7ab8faf7077fdeb5b",
 	"battle_state_multi.gd": "40852efdec72aa54af1912334eb8d5bf2bc00954464178ddef28b9bcab4287a0",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
-	"comeback_option.gd": "3cb051111c0d957a7617e047f58cbbc615e6ee196fed4f08efd1650391e1f4f8",
-	"comeback.gd": "24a2bbdbc62f726c7e630f55750e75140133fb504e5613a79ce6178887957770",
+	"comeback_option.gd": "d2283b01b5f79de3e3c5c0d61bf61ebe7921cdf824ae2157f02fab8a7c543e90",
+	"comeback.gd": "939951a10f1e7e7bcdb88c35efa795d4d90a1dca1e7abf8be856f5390d09cf4c",
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "dbbd720e0940ff21d769c51d3dd343a7f8e4a3431d60b8c71708e4dbae4ee59e",
 	"leaderboard.gd": "b5bb031c7cc72856066bd2588a21c8522bbb76d57ff2e1ec765a9a6e0f6628b9",
-	"lobby_panel.gd": "cd487af240389ec34b873a3dcc25b7c779ad33348213b74ab3762f6263d961f1",
-	"lobby_state.gd": "0ee01331c4c897e9ecf91e7b8f9c194cdc90b67784ed96bfb575e4a83829a515",
+	"lobby_panel.gd": "0c5a6320be31ff6637312963401ec0ebaa1f22425312b0c8091b242c729458c9",
+	"lobby_state.gd": "cca33617e76ae911cf0b72c95c36fd16888ee918383d18df8fb76def15ce3379",
 	"loopback_transport.gd": "3d9111f74840c48a4b9fe9089a79d96fc8b24d1e02b3d3182d343d0430fb3627",
 	"match_client.gd": "f08a321c27dfe023ce1243158f3096356174032ed32063322b3f7d939ce9f6a1",
 	"match_host.gd": "a805c25a0324ea75f134caf1e1e8df968202e51729ebcc680a8984d5ff0bff48",

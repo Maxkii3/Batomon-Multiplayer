@@ -19,7 +19,11 @@ extends PanelContainer
 
 const RoomCode := preload("res://batomulti/room_code.gd")
 const COL_DIM := Color(0.62, 0.62, 0.70)
-const SPEEDS := [1.0, 2.0, 4.0]   # host battle speed choices (every client plays battles at it)
+const SPEEDS := [1.0, 2.0, 4.0, 6.0, 8.0]   # host battle speed choices (every client plays battles at it)
+const COL_CODE := Color(1.0, 0.92, 0.25)       # the room code: bright yellow on the dark panel
+const COL_ON_BG := Color(1.0, 0.85, 0.25)      # selected speed: yellow button, dark text
+const COL_OFF_BG := Color(0.16, 0.18, 0.26)
+const COPIED_SECONDS := 1.5
 const COL_TEXT := Color(0.96, 0.96, 0.96)
 const COL_ACCENT := Color(1.0, 0.85, 0.4)
 const COL_BAD := Color(1.0, 0.40, 0.35)
@@ -39,7 +43,12 @@ var _room_edit: LineEdit             # the code "Create room" uses (prefilled wi
 var _minutes: SpinBox
 var _lives: SpinBox
 var _tie: OptionButton
-var _speed: OptionButton
+var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); the lit one is the room's speed
+var _speed_i := 0
+var _code_value: Label             # the code itself, in a room (bright yellow)
+var _copy_btn: Button
+var _copy_token := 0               # the latest Copy click (only its timer resets the label)
+var last_copied := ""              # what the Copy button put on the clipboard (tests)
 var _create_btn: Button
 var _join_btn: Button
 var _start_btn: Button
@@ -91,13 +100,21 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	var code_row := HBoxContainer.new()
 	_code_label = _label("", COL_TEXT)
 	code_row.add_child(_code_label)
+	_code_value = _label("", COL_CODE)
+	_code_value.add_theme_constant_override("outline_size", 2)
+	_code_value.add_theme_color_override("font_outline_color", Color(0.35, 0.22, 0.0))
+	code_row.add_child(_code_value)
 	_room_edit = _code_edit("ABC234", 0)              # no hard cap: a paste is filtered first, then cut to 8
+	_room_edit.add_theme_color_override("font_color", COL_CODE)
 	_room_edit.custom_minimum_size = Vector2(72, 0)
 	_room_edit.text = RoomCode.sanitize(str(hub.dev_arg("room", RoomCode.generate())))
 	_room_edit.tooltip_text = "Your room code: keep the random one or type your own (4-8 letters / digits)."
 	_room_edit.text_changed.connect(_on_room_edit_changed)
 	_room_edit.text_submitted.connect(func(_t): _create())
 	code_row.add_child(_room_edit)
+	_copy_btn = _button("Copy", func(): copy_code())
+	_copy_btn.tooltip_text = "Copy the room code to the clipboard"
+	code_row.add_child(_copy_btn)
 	vb.add_child(code_row)
 
 	vb.add_child(_label("Host settings", COL_DIM))
@@ -118,19 +135,21 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_tie.add_theme_font_size_override("font_size", font_size)
 	_tie.focus_mode = Control.FOCUS_NONE
 	rule_row.add_child(_tie)
-	rule_row.add_child(_label("  Battle speed", COL_TEXT))
-	_speed = OptionButton.new()
-	for sp in SPEEDS:
-		_speed.add_item("%dx" % int(sp))
-	_speed.add_theme_font_override("font", font)
-	_speed.add_theme_font_size_override("font_size", font_size)
-	_speed.focus_mode = Control.FOCUS_NONE
-	rule_row.add_child(_speed)
 	vb.add_child(rule_row)
+	var speed_row := HBoxContainer.new()
+	speed_row.add_theme_constant_override("separation", 3)
+	speed_row.add_child(_label("Battle speed", COL_TEXT))
+	for i in SPEEDS.size():
+		var b := _button("x%d" % int(SPEEDS[i]), func(): _pick_speed(i))
+		b.custom_minimum_size = Vector2(26, 0)
+		b.tooltip_text = "Every battle in the room plays at x%d" % int(SPEEDS[i])
+		speed_buttons.append(b)
+		speed_row.add_child(b)
+	vb.add_child(speed_row)
+	_style_speeds()
 	for c in [_minutes, _lives]:
 		c.value_changed.connect(func(_v): _push_settings())
 	_tie.item_selected.connect(func(_i): _push_settings())
-	_speed.item_selected.connect(func(_i): _push_settings())
 
 	var btns := HBoxContainer.new()
 	_create_btn = _button("Create room", func(): _create())
@@ -167,7 +186,60 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 func settings() -> Dictionary:
 	return {"shop_seconds": _minutes.value * 60.0, "lives": int(_lives.value),
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
-		"battle_speed": SPEEDS[maxi(0, _speed.selected)]}
+		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)]}
+
+
+func _pick_speed(i: int) -> void:
+	_speed_i = i
+	_style_speeds()
+	_push_settings()
+
+
+## High contrast: the room's speed = yellow button with dark text; the others = white text on slate.
+## Locked (a guest, or the match runs) = dimmer, but the room's speed stays lit.
+func _style_speeds() -> void:
+	for i in speed_buttons.size():
+		var b: Button = speed_buttons[i]
+		var on := i == _speed_i
+		var bg := COL_ON_BG if on else COL_OFF_BG
+		for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = bg.lightened(0.12) if st == "hover" and not b.disabled else (bg.darkened(0.25) if st == "disabled" and not on else bg)
+			sb.border_color = Color(1, 1, 1, 0.9) if on else Color(0.55, 0.8, 1.0, 0.7)
+			sb.set_border_width_all(1)
+			sb.set_content_margin_all(2)
+			sb.content_margin_left = 4
+			sb.content_margin_right = 4
+			b.add_theme_stylebox_override(st, sb)
+		var fg := Color(0.08, 0.06, 0.02) if on else Color(1, 1, 1)
+		for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			b.add_theme_color_override(k, fg)
+		b.add_theme_color_override("font_disabled_color", fg if on else Color(0.75, 0.78, 0.85))
+
+
+## The code to share: the room's code in a room, else the (valid) code typed in the field.
+func shown_code() -> String:
+	var t = hub.transport if hub != null else null
+	if t != null and t.code != "":
+		return str(t.code)
+	return RoomCode.normalize(_room_edit.text)
+
+
+func copy_code() -> void:
+	var c := shown_code()
+	if c == "":
+		set_status(RoomCode.BAD, true)
+		return
+	DisplayServer.clipboard_set(c)
+	last_copied = c
+	_copy_token += 1
+	var tok := _copy_token
+	_copy_btn.text = "Copied!"
+	set_status("Room code %s copied - paste it to your friends." % c)
+	# real seconds: a lobby battle runs Engine.time_scale up to 8 while the panel can be open (F1)
+	get_tree().create_timer(COPIED_SECONDS, true, false, true).timeout.connect(func():
+		if tok == _copy_token and is_instance_valid(_copy_btn):
+			_copy_btn.text = "Copy")
 
 
 func _push_settings() -> void:
@@ -217,7 +289,9 @@ func refresh() -> void:
 	var on_menu: bool = hub.on_title_screen()
 	var can_enter: bool = t != null and not in_room and on_menu and hub.save_blocked == ""
 	_title.text = "Multiplayer" + ("  (local test network)" if hub.transport_kind == "mock" else "")
-	_code_label.text = "Room code: %s" % t.code if in_room else "Room code"
+	_code_label.text = "Room code:" if in_room else "Room code"
+	_code_value.text = str(t.code) if in_room else ""
+	_code_value.visible = in_room
 	_room_edit.visible = not in_room
 	_room_edit.editable = can_enter
 	_create_btn.disabled = not can_enter
@@ -230,11 +304,14 @@ func refresh() -> void:
 	for c in [_minutes, _lives]:
 		c.editable = (not in_room) or (is_host and lobby)
 	_tie.disabled = in_room and not (is_host and lobby)
-	_speed.disabled = in_room and not (is_host and lobby)
-	if in_room and not (is_host and lobby) and hub.client != null:
+	var speed_locked: bool = in_room and not (is_host and lobby)
+	if speed_locked and hub.client != null:
 		var i := SPEEDS.find(float(hub.client.state.settings.get("battle_speed", 1.0)))
-		if i >= 0 and _speed.selected != i:
-			_speed.select(i)                  # guests see the host's choice
+		if i >= 0:
+			_speed_i = i                      # guests see the host's choice
+	for b in speed_buttons:
+		b.disabled = speed_locked
+	_style_speeds()
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:

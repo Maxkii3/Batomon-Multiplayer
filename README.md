@@ -1,4 +1,19 @@
-# BatoMulti
+# BatoMulti — Batomon Showdown Multiplayer Mod
+
+**Batomon Multiplayer for Steam on Windows: play Batomon Showdown with friends in private online rooms.**
+
+BatoMulti is an unofficial Batomon Showdown multiplayer mod created and maintained by
+[Maxkii3](https://github.com/Maxkii3). One player hosts a room and shares a short code.
+Everyone builds their team in the shop at the same time, then battles round after round
+until only one trainer is left standing. You can also join as a spectator and watch friends live.
+
+**[Download BatoMulti](https://github.com/Maxkii3/Batomon-Multiplayer/releases)** ·
+[Installation guide](#-how-to-install) ·
+[Play with friends](#-how-to-play-with-friends) ·
+[Report a bug](https://github.com/Maxkii3/Batomon-Multiplayer/issues)
+
+Requires Batomon Showdown on **Steam for Windows**. Everyone playing needs the same
+BatoMulti version and Steam running. This is a community mod, not an official multiplayer update.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
 
@@ -11,11 +26,6 @@
   <br/>
   <sub><b>TH:</b> เติมเกมถูก รวดเร็ว ปลอดภัย แนะนำที่ GST Topup | <b>EN:</b> Affordable, fast, and secure game top-ups at GST Topup</sub>
 </div>
-
-**Play Batomon Showdown with your friends — at the same time, in a private room.**
-
-One player creates a room and shares a short code. Everyone builds their team in the shop at the
-same time, then you battle each other round after round until only one trainer is left standing.
 
 ---
 
@@ -41,13 +51,15 @@ same time, then you battle each other round after round until only one trainer i
 
 - **1-click setup** — one file installs everything. Already using another mod? It's
   put safely aside and comes back exactly as it was when you uninstall.
-- **Private rooms with codes** — no strangers, just your friends.
-- **Speed controls** — the host picks 1x, 2x or 4x battle speed for everyone.
+- **Private rooms with codes** — no strangers, just your friends. Pick your own code (or keep the random
+  one) and copy it with one click.
+- **Speed controls** — the host picks 1x, 2x, 4x, 6x or 8x battle speed for everyone.
 - **Revamped Second Chance** — the first time you hit zero lives, you're back with 1 life and pick one
   of four comebacks:
   - **Board Upgrade** — every unit on your board levels up (up to level 3)
   - **Element Infusion** — give one of your units a new element
-  - **Trinket** — choose a Legendary trinket (Mythical later in the game)
+  - **Trinket** — choose a trinket whose rarity grows with the day: Common (Day 1-2), Rare (3-5),
+    Super Rare (6-10), Legendary (11-16), Mythical (17+)
   - **Scaling Gold** — a pile of gold that grows the longer the match goes
 - **Know your next opponent** — the shop shows who you fight next (⚔), so you can plan your board against them.
 - **Scout your opponents** — click a name on the leaderboard to peek at their 3×2 board.
@@ -61,7 +73,7 @@ same time, then you battle each other round after round until only one trainer i
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.5.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.6.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -83,7 +95,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 Everyone needs BatoMulti installed (same version) and Steam running.
 
 - **Host:** Multiplayer → pick the shop timer, lives and battle speed → keep the random **room
-  code** or type your own (4-8 letters / digits) → **Create room** → send the code to your friends → **Start match** once everyone shows up.
+  code** or type your own (4-8 letters / digits) → **Create room** → press **Copy** and send the code to your friends → **Start match** once everyone shows up.
 - **Friends:** Multiplayer → type the code → **Join**.
 - **Player or Spectator:** the room list on the right of the lobby shows everyone. Press your own
   **Player / Spectator** button to switch; the host can switch anyone. Roles lock when the match
@@ -92,17 +104,42 @@ Everyone needs BatoMulti installed (same version) and Steam running.
   is locked in automatically.
 - **F1** opens the room panel at any time.
 
+## Batomon Showdown multiplayer FAQ
+
+### Can I play Batomon Showdown with friends in a private room?
+
+Yes. With BatoMulti installed, open **Multiplayer** from the main menu. One player creates
+a room and shares the room code; friends enter that code to join. A match needs at least
+two players. See [How to play with friends](#-how-to-play-with-friends) for the host settings.
+
+### Which platforms does this Batomon multiplayer mod support?
+
+BatoMulti supports the **Steam version of Batomon Showdown on Windows**. Each player
+needs the mod installed, the same mod version, and Steam running.
+
+### Can I watch friends without joining the match?
+
+Yes. Choose **Spectator** in the lobby before the match starts. Spectators can watch
+players' shops and battles live without taking a player slot. Eliminated players can
+also keep watching.
+
+### Is BatoMulti an official Batomon Showdown update?
+
+No. BatoMulti is an unofficial community mod maintained by Maxkii3. It is not affiliated
+with or endorsed by the developers or publisher of Batomon Showdown.
+For mod support, [open an issue in this repository](https://github.com/Maxkii3/Batomon-Multiplayer/issues).
+
 ## 🧹 How to uninstall
 
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.5.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.6.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.5.cmd uninstall
-   BatoMulti-Setup-0.6.5.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.5.cmd status
+   BatoMulti-Setup-0.6.6.cmd uninstall
+   BatoMulti-Setup-0.6.6.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.6.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
@@ -143,3 +180,4 @@ at any time.
 
 <sub>BatoMulti is an unofficial fan-made mod for Batomon Showdown (Steam, Windows). Multiplayer rooms run over
 Steam between friends; matches never touch ranked play, ghosts or your saved runs.</sub>
+

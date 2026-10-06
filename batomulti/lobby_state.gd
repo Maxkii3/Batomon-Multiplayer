@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS := {
 	"tie_rule": "both_win",     # "both_win" | "no_change"
 	"max_players": 8,
 	"set_id": "starter",        # card set every lobby run is started with
-	"battle_speed": 1.0,        # host-set playback speed of every lobby battle (1 / 2 / 4), same for all
+	"battle_speed": 1.0,        # host-set playback speed of every lobby battle (1 / 2 / 4 / 6 / 8), same for all
 	"second_chance": true,      # the game's Second Chance: the first time at 0 lives -> 1 life + a buff
 }
 
