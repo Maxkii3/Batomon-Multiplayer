@@ -107,11 +107,12 @@ func _write_room_file() -> bool:
 
 # ------------------------------------------------------------ room
 
-func create_room(room_code: String, _max_players: int) -> void:
+func create_room(room_code: String, max_members: int) -> void:
 	if _room_live(room_code):
 		room_failed.emit(RoomCode.IN_USE)
 		return
 	code = room_code
+	member_limit = max_members
 	last_code = room_code
 	_host = self_id
 	_members = [self_id]
@@ -144,6 +145,36 @@ func _room_live(room_code: String) -> bool:
 	var live := conn.get_status() == StreamPeerTCP.STATUS_CONNECTED
 	conn.disconnect_from_host()
 	return live
+
+
+func _info_file(c: String) -> String:
+	return dir.path_join("room_%s.info" % c)
+
+
+func set_room_info(info: Dictionary) -> void:
+	super(info)
+	if code == "" or not is_host():
+		return
+	var f := FileAccess.open(_info_file(code), FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(info))
+		f.close()
+
+
+## Every live room in the shared folder with its info file (the live check = the 0.6.4 TCP probe).
+func list_rooms(_filters: Dictionary = {}) -> void:
+	var rows: Array = []
+	for fn in DirAccess.get_files_at(dir):
+		if not (fn.begins_with("room_") and fn.ends_with(".txt")):
+			continue
+		var c := fn.trim_prefix("room_").trim_suffix(".txt")
+		if not FileAccess.file_exists(_info_file(c)) or (c != code and not _room_live(c)):
+			continue
+		var info = JSON.parse_string(FileAccess.get_file_as_string(_info_file(c)))
+		if info is Dictionary:
+			info["id"] = c
+			rows.append(info)
+	rooms_listed.emit.call_deferred(rows)
 
 
 func join_room(room_code: String) -> void:

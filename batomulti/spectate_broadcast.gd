@@ -27,6 +27,7 @@ extends Node
 ## the shop's gift popup) the shop scene's own TrinketSelectUI shows it live: the box drops, opens,
 ## shows the same trinket options, and the one they took stays lit (the others dimmed).
 
+const UiTheme := preload("res://batomulti/ui_theme.gd")
 const SHOP_SCENE := "res://game/states/shop_state.tscn"
 const LAYER_OFFSET := 100          # our shop scene's CanvasLayers: above the (hidden) own game
 const SHIELD_LAYER := 118          # under the battle replay (120) and the BatoMulti UI (121)
@@ -76,9 +77,11 @@ func setup(p_bm) -> void:
 	_wait_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_wait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_wait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_wait_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
-	_wait_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_wait_label.add_theme_constant_override("outline_size", 4)
+	_wait_label.add_theme_font_override("font", UiTheme.font_title())
+	_wait_label.add_theme_font_size_override("font_size", UiTheme.TITLE_SIZE)
+	_wait_label.add_theme_color_override("font_color", UiTheme.YELLOW)
+	_wait_label.add_theme_color_override("font_outline_color", UiTheme.DARK)
+	_wait_label.add_theme_constant_override("outline_size", 6)
 	_wait_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wait_label.visible = false
 	_shield.add_child(_wait_label)
@@ -176,20 +179,24 @@ func update() -> void:
 	var e: Dictionary = c.shop_view_of(id) if id != 0 else {}
 	var key := ""
 	var d: Dictionary = {}
+	var loading: bool = c.has_method("watch_loading") and c.watch_loading()
 	if not e.is_empty() and e.view.has("run"):
 		key = "%d|%d|%d" % [id, int(e.round), int(e.seq)]
 		d = e.view.run
+	elif loading:
+		key = shown_key                                       # just switched (protocol 7): keep the screen, "Loading..." until the keyframe
 	elif id != 0:
 		var v: Dictionary = c.spectate_view(id)               # fallback: their last confirmed board
 		if not v.board.is_empty():
 			key = "%d|board|%d" % [id, int(v.round)]
 			d = v.board
-	_wait_label.visible = key == "" and not watching_battle
+	_wait_label.visible = (key == "" or loading) and not watching_battle
 	if _wait_label.visible:
 		if bm != null and bm.font != null:
 			_wait_label.add_theme_font_override("font", bm.font)
 		var nm: String = str(c.state.seats.get(id, {}).get("name", "")) if id != 0 else ""
-		_wait_label.text = "Waiting for %s's screen..." % nm if nm != "" else "Waiting for the match..."
+		_wait_label.text = ("Loading %s's shop..." if loading else "Waiting for %s's screen...") % nm \
+			if nm != "" else "Waiting for the match..."
 	if key == shown_key:
 		return
 	if id != shown_id:

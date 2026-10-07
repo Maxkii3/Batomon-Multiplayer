@@ -23,13 +23,16 @@ signal spectate_pressed(id: int)        # 0 = follow (first alive player)
 signal replay_pressed()
 signal leave_pressed()
 
-const COL_BG := Color(0.05, 0.05, 0.09, 0.93)
-const COL_EDGE := Color(0.80, 0.22, 0.20, 0.95)
-const COL_TITLE := Color(1.0, 0.45, 0.40)
-const COL_TEXT := Color(0.96, 0.96, 0.96)
-const COL_DIM := Color(0.70, 0.70, 0.78)
-const WIDTH := 220.0
-const ROW := 18.0
+## Look (0.6.7): the game's red-framed dialog; Spectate (follow) = yellow, one blue button per alive player in a
+## scroll list (native scroll bar, MAX_PLAYER_ROWS visible: any room size fits), Leave = red.
+
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const COL_TITLE := UiTheme.RED
+const COL_DIM := UiTheme.TEXT
+const WIDTH := 240.0
+const ROW := 22.0
+const IN := 14.0                        # the dialog frame's side inset
+const MAX_PLAYER_ROWS := 5
 
 var client
 var transport
@@ -42,28 +45,37 @@ var replay_button: Button
 var leave_button: Button
 var shown_frames := 0
 var _ids_key := ""
+var scroll: ScrollContainer             # the per-player Spectate buttons
+var _player_box: VBoxContainer
 
 
-func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
+func setup(p_client, p_transport, _p_font: Font, _p_size: int) -> void:
 	client = p_client
 	transport = p_transport
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = UiTheme.BODY_SIZE
+	theme = UiTheme.get_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	follow_button = _button("Spectate (follow the match)", func(): spectate_pressed.emit(0))
-	replay_button = _button("Watch Replay", func(): replay_pressed.emit())
-	leave_button = _button("Leave to Main Menu", func(): leave_pressed.emit())
+	follow_button = _button("Spectate (follow the match)", func(): spectate_pressed.emit(0), "BmPrimary")
+	replay_button = _button("Watch Replay", func(): replay_pressed.emit(), "")
+	leave_button = _button("Leave to Main Menu", func(): leave_pressed.emit(), "BmDanger")
+	scroll = UiTheme.scroll_box()
+	add_child(scroll)
+	_player_box = VBoxContainer.new()
+	_player_box.add_theme_constant_override("separation", 2)
+	_player_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_player_box)
 	visible = false
 
 
-func _button(text: String, cb: Callable) -> Button:
+func _button(text: String, cb: Callable, variation: String, parent: Node = null) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", font)
-	b.add_theme_font_size_override("font_size", font_size)
+	b.theme_type_variation = variation
+	b.clip_text = true
 	b.pressed.connect(cb)
-	add_child(b)
+	(parent if parent != null else self).add_child(b)
 	return b
 
 
@@ -84,24 +96,31 @@ func refresh() -> void:
 		player_buttons.clear()
 		for id in ids:
 			var target: int = id
-			player_buttons.append([_button("Spectate %s" % _name(id), func(): spectate_pressed.emit(target)), id])
-	var y := 40.0
-	follow_button.position = Vector2(10, y)
-	follow_button.size = Vector2(WIDTH - 20, ROW - 2)
+			var b := _button("Spectate %s" % _name(id), func(): spectate_pressed.emit(target), "", _player_box)
+			b.custom_minimum_size = Vector2(0, ROW - 2)
+			player_buttons.append([b, id])
+	var y := 46.0
+	var bw := WIDTH - IN * 2
+	follow_button.position = Vector2(IN, y)
+	follow_button.size = Vector2(bw, ROW - 2)
 	y += ROW + 4
-	for pb in player_buttons:
-		pb[0].position = Vector2(10, y)
-		pb[0].size = Vector2(WIDTH - 20, ROW - 2)
-		y += ROW
-	y += 4
+	var n := player_buttons.size()
+	var many := n > MAX_PLAYER_ROWS
+	scroll.visible = n > 0
+	if n > 0:
+		var shown := mini(n, MAX_PLAYER_ROWS)
+		scroll.position = Vector2(IN, y)
+		scroll.size = Vector2(bw, shown * ROW - 2)
+		_player_box.custom_minimum_size = Vector2(bw - (scroll.get_v_scroll_bar().get_combined_minimum_size().x + 2.0 if many else 0.0), 0)
+		y += shown * ROW + 4
 	replay_button.visible = replay_available
 	if replay_available:
-		replay_button.position = Vector2(10, y)
-		replay_button.size = Vector2(WIDTH - 20, ROW - 2)
+		replay_button.position = Vector2(IN, y)
+		replay_button.size = Vector2(bw, ROW - 2)
 		y += ROW
-	leave_button.position = Vector2(10, y)
-	leave_button.size = Vector2(WIDTH - 20, ROW - 2)
-	y += ROW + 6
+	leave_button.position = Vector2(IN, y)
+	leave_button.size = Vector2(bw, ROW - 2)
+	y += ROW + 10
 	size = Vector2(WIDTH, y)
 	var vp := get_viewport_rect().size if is_inside_tree() else Vector2(640, 360)
 	position = Vector2(floor((vp.x - size.x) / 2.0), floor(maxf(4.0, (vp.y - size.y) / 2.0 - 20.0)))
@@ -116,7 +135,8 @@ func _process(_d: float) -> void:
 func _draw() -> void:
 	if font == null:
 		return
-	draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
-	draw_rect(Rect2(Vector2.ZERO, size), COL_EDGE, false, 1.0)
-	draw_string(font, Vector2(0, 6 + font_size + 1), "ELIMINATED", HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size + 4, COL_TITLE)
-	draw_string(font, Vector2(0, 24 + font_size), "Out of lives. Keep watching the match:", HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, COL_DIM)
+	UiTheme.draw_box(self, "BmDialog", Rect2(Vector2.ZERO, size))
+	UiTheme.draw_outlined(self, UiTheme.font_title(), Vector2(0, 8), "ELIMINATED", UiTheme.TITLE_SIZE, COL_TITLE, size.x,
+		HORIZONTAL_ALIGNMENT_CENTER, 4)
+	UiTheme.draw_text(self, font, Vector2(0, 28), "Out of lives. Keep watching the match:", font_size, COL_DIM, size.x,
+		HORIZONTAL_ALIGNMENT_CENTER)

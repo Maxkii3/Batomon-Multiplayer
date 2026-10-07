@@ -43,11 +43,14 @@ const NOTICE_SECONDS := 12.0
 const GAME_PCK := "batomon_showdown.pck"
 const BANNER_POS := Vector2(6, 150) # title screen: the empty space left of the menu, under the logo
 const BANNER_W := 192.0             # (640x360 base: the menu box starts at x ~203, Patch Notes at y ~265)
-const COL_BG := Color(0.05, 0.05, 0.09, 0.96)
-const COL_EDGE := Color(0.95, 0.78, 0.25, 0.95)
-const COL_TEXT := Color(0.96, 0.96, 0.96)
-const COL_BAD := Color(1.0, 0.5, 0.45)
-const COL_GOOD := Color(0.55, 0.95, 0.6)
+## Look (0.6.7): the game's red-framed dialog (a success notice: the white card), Guilty Treasure text, the game's
+## textured buttons - Update Now / Restart Now / Retry yellow, Later / Hide / OK blue.
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const COL_TEXT := UiTheme.DARK
+const COL_BAD := UiTheme.RED
+const COL_GOOD := Color("#2f9e44")
+const IN := 13.0                     # text / button inset inside the frame
+const BTN_H := 19.0
 
 ## idle / checking / current (up to date) / offline (check failed, silent) / available / downloading /
 ## ready / applying / failed (download or apply failed after the player asked)
@@ -83,13 +86,15 @@ var _apply_called := false
 
 func setup(p_host, p_font: Font, p_size: int, version: String, dir := "") -> void:
 	host = p_host
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = UiTheme.BODY_SIZE
+	theme = UiTheme.get_theme()
 	current = version
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	tmp_dir = ProjectSettings.globalize_path(dir).replace("\\", "/") if dir != "" else temp_dir()
 	update_btn = _button("Update Now", _on_primary)
+	update_btn.theme_type_variation = "BmPrimary"
 	later_btn = _button("Later", _on_later)
 	ok_btn = _button("OK", func(): _notice_until = 0.0)
 	_api = HTTPRequest.new()
@@ -119,18 +124,6 @@ func _button(text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", font)
-	b.add_theme_font_size_override("font_size", font_size)
-	for st in [["normal", Color(0.20, 0.20, 0.30)], ["hover", Color(0.32, 0.30, 0.46)], ["pressed", Color(0.14, 0.14, 0.22)]]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = st[1]
-		sb.border_color = Color(0.95, 0.78, 0.25, 0.8)
-		sb.set_border_width_all(1)
-		sb.content_margin_top = 1
-		sb.content_margin_bottom = 1
-		b.add_theme_stylebox_override(st[0], sb)
-	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
-		b.add_theme_color_override(c, COL_TEXT)
 	b.pressed.connect(cb)
 	add_child(b)
 	return b
@@ -587,15 +580,16 @@ func _layout() -> void:
 	ok_btn.visible = note
 	update_btn.text = {"available": "Update Now", "ready": "Restart Now", "failed": "Retry"}.get(state, "Update Now")
 	later_btn.text = "Hide" if state in ["downloading", "failed"] else "Later"
-	var x := 8.0
+	var x := IN
 	var any := false
+	var bw := floorf((BANNER_W - IN * 2 - 6.0) / 2.0)
 	for b in [update_btn, later_btn, ok_btn]:
 		if b.visible:
-			b.position = Vector2(x, 6 + text_h + 4)
-			b.size = Vector2(84, 15)
-			x += 90.0
+			b.position = Vector2(x, 9 + text_h + 5)
+			b.size = Vector2(bw, BTN_H)
+			x += bw + 6.0
 			any = true
-	size = Vector2(BANNER_W, 6 + text_h + (4 + 15 + 6 if any else 5))
+	size = Vector2(BANNER_W, 9 + text_h + (5 + BTN_H + 10 if any else 9))
 	queue_redraw()
 
 
@@ -606,23 +600,22 @@ func _shown_text() -> String:
 func _text_height() -> float:
 	if font == null:
 		return float(font_size)
-	return font.get_multiline_string_size(_shown_text(), HORIZONTAL_ALIGNMENT_LEFT, BANNER_W - 16, font_size).y
+	return font.get_multiline_string_size(_shown_text(), HORIZONTAL_ALIGNMENT_LEFT, BANNER_W - IN * 2, font_size).y
 
 
 func _draw() -> void:
 	if font == null:
 		return
 	var note := notice_active()
-	var edge := COL_EDGE
 	var col := COL_TEXT
+	var frame := "BmDialog"
 	if note:
-		edge = COL_GOOD if notice_good else COL_BAD
+		col = COL_GOOD if notice_good else COL_BAD
+		frame = "BmCard" if notice_good else "BmDialog"
 	elif state == "failed":
-		edge = COL_BAD
 		col = COL_BAD
-	draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
-	draw_rect(Rect2(Vector2.ZERO, size), edge, false, 1.0)
-	draw_multiline_string(font, Vector2(8, 6 + font.get_ascent(font_size)), _shown_text(), HORIZONTAL_ALIGNMENT_LEFT, BANNER_W - 16, font_size, -1, col)
+	UiTheme.draw_box(self, frame, Rect2(Vector2.ZERO, size))
+	draw_multiline_string(font, Vector2(IN, 9 + font.get_ascent(font_size)), _shown_text(), HORIZONTAL_ALIGNMENT_LEFT, BANNER_W - IN * 2, font_size, -1, col)
 
 
 ## The detached restart helper (Windows PowerShell 5.1, pure ASCII, .NET only: it must work even when

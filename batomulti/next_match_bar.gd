@@ -16,10 +16,10 @@ extends Control
 
 signal scout_requested(id: int)
 
-const COL_BAR := Color(0.05, 0.05, 0.09, 0.78)
-const COL_EDGE := Color(0.80, 0.22, 0.20, 0.95)
-const COL_TEXT := Color(1.0, 0.85, 0.4)
-const COL_DIM := Color(0.75, 0.75, 0.82)
+## Look (0.6.7): a white game card, crossed swords + "NEXT MATCH" in the game's red, the name in dark text.
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const COL_TEXT := UiTheme.DARK
+const COL_ACCENT := UiTheme.RED
 const WIDTH := 240.0
 const H := 20.0
 const DOCK_X := 38.0
@@ -36,8 +36,8 @@ var shows := 0                          # tests: frames shown
 func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
 	client = p_client
 	transport = p_transport
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = UiTheme.BODY_SIZE
 	size = Vector2(WIDTH, H)
 	position = Vector2(DOCK_X, 0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -74,7 +74,9 @@ func _gui_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if font == null or opp == 0:
 		return
-	draw_rect(Rect2(Vector2.ZERO, size), COL_BAR)
-	draw_line(Vector2(0, H), Vector2(size.x, H), COL_EDGE, 1.0)
-	preload("res://batomulti/leaderboard.gd").swords(self, Rect2(5, 5, 10, 10), COL_TEXT)
-	draw_string(font, Vector2(20, 5 + font_size + 1), text(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, font_size, COL_TEXT)
+	UiTheme.draw_box(self, "BmCard", Rect2(Vector2.ZERO, size))
+	preload("res://batomulti/leaderboard.gd").swords(self, Rect2(6, 5, 10, 10), COL_ACCENT)
+	var head := "NEXT MATCH:"
+	UiTheme.draw_text(self, font, Vector2(21, 4), head, font_size, COL_ACCENT)
+	var hw := font.get_string_size(head + " ", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	UiTheme.draw_text(self, font, Vector2(21 + hw, 4), text().trim_prefix("NEXT MATCH: "), font_size, COL_TEXT, size.x - 26 - hw)

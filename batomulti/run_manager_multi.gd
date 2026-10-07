@@ -45,6 +45,16 @@ func start_new_run(is_ranked: bool = false, set_id: String = "starter"):
 	b.lobby_run_started(data)
 
 
+## A lobby run in the save slot is never the title's Continue (live 2026-10-07: after a game kill, Continue
+## resumed the kept lobby run as a solo run). Only BatoMulti's Rejoin restores it (LocalSaveStore).
+func peek_best_save() -> RunData:
+	var save: RunData = await super()
+	var b = _bm()
+	if save != null and b != null and b.has_method("is_lobby_run_id") and b.is_lobby_run_id(str(save.run_id)):
+		return null
+	return save
+
+
 ## The opponent = the board of this round's lobby opponent (waits for the round barrier; the shop
 ## shows its own "searching" popup meanwhile).
 func get_opponent_for_current_round() -> RunData:
@@ -82,4 +92,5 @@ func determine_post_battle_state() -> String:
 	if not _bm_on():
 		return super()
 	_bm().after_battle(data)
+	_bm().suppress_post_battle(data)               # eliminated: no event / gift pick before the hub (protocol 8)
 	return "event" if data.pending_event_id != "" else "shop"

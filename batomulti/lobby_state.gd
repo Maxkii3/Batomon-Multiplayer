@@ -19,7 +19,10 @@ const SPECTATOR := "spectator"   # status of a dedicated spectator during a matc
 ## Seat roles (v0.7.0, lobby sidebar): a "spectator" seat watches the whole match from round 1.
 const ROLE_PLAYER := "player"
 const ROLE_SPECTATOR := "spectator"
-const MAX_SPECTATORS := 8        # spectator seats on top of max_players
+const MAX_SPECTATORS := 8        # default spectator seats on top of max_players (host setting max_spectators)
+## Big rooms (0.6.7, protocol 7): the only hard cap is Steam's lobby size, players + spectators.
+const STEAM_MEMBER_CAP := 250
+const MIN_PLAYERS := 2
 
 const DEFAULT_SETTINGS := {
 	"shop_seconds": 120.0,      # shop / preparation phase per round
@@ -27,6 +30,7 @@ const DEFAULT_SETTINGS := {
 	"loss_cost": "game",        # "game" = 1 (Day 1-2) / 2 (Day 3-4) / 3 (Day 5+), or "flat:N"
 	"tie_rule": "both_win",     # "both_win" | "no_change"
 	"max_players": 8,
+	"max_spectators": MAX_SPECTATORS,
 	"set_id": "starter",        # card set every lobby run is started with
 	"battle_speed": 1.0,        # host-set playback speed of every lobby battle (1 / 2 / 4 / 6 / 8), same for all
 	"second_chance": true,      # the game's Second Chance: the first time at 0 lives -> 1 life + a buff
@@ -45,13 +49,38 @@ func add_player(id: int, name: String) -> bool:
 	if seats.has(id):
 		seats[id].name = name
 		return true
-	if phase != "lobby" or seats.size() >= int(settings.max_players) + MAX_SPECTATORS:
+	if phase != "lobby" or seats.size() >= member_limit(settings):
 		return false
 	var role := ROLE_PLAYER if players().size() < int(settings.max_players) else ROLE_SPECTATOR
 	seats[id] = {"id": id, "name": name, "lives": int(settings.lives), "wins": 0, "losses": 0,
 		"status": ALIVE, "out_round": 0, "ready": false, "at_shop": 0, "connected": true, "token_hash": "",
 		"second_chance": false, "role": role}
 	return true
+
+
+## Steam lobby member limit for a room: every player seat + every spectator seat (F1, 0.6.7: it used to be
+## max_players only, so on real Steam a full room had no room left for a single spectator).
+static func member_limit(p_settings: Dictionary) -> int:
+	var c := clamp_size(int(p_settings.get("max_players", DEFAULT_SETTINGS.max_players)),
+		int(p_settings.get("max_spectators", MAX_SPECTATORS)))
+	return c[0] + c[1]
+
+
+## [players, spectators] inside the room-size rules: players >= 2 (and >= have_p, the players already
+## seated), spectators >= have_s, players + spectators <= Steam's 250. Players win over spectators.
+static func clamp_size(p: int, s: int, have_p := 0, have_s := 0) -> Array:
+	var cp := clampi(p, maxi(MIN_PLAYERS, have_p), maxi(MIN_PLAYERS, STEAM_MEMBER_CAP - have_s))
+	var cs := clampi(s, have_s, maxi(have_s, STEAM_MEMBER_CAP - cp))
+	return [cp, cs]
+
+
+## Host settings change (lobby): the room size never goes below the seats already taken.
+func apply_settings(p_settings: Dictionary) -> void:
+	settings.merge(p_settings, true)
+	var c := clamp_size(int(settings.max_players), int(settings.get("max_spectators", MAX_SPECTATORS)),
+		players().size(), spectators().size())
+	settings.max_players = c[0]
+	settings.max_spectators = c[1]
 
 
 static func is_spectator_seat(seat: Dictionary) -> bool:
@@ -88,7 +117,18 @@ func set_role(id: int, role: String) -> bool:
 	if role == ROLE_PLAYER and players().size() >= int(settings.max_players):
 		return false
 	seats[id]["role"] = role
+	seats[id]["ready"] = false                    # a new role is a new Ready check (protocol 8)
 	return true
+
+
+## Lobby Ready check (protocol 8): the player seats that did not press Ready yet. The host (`host_id`)
+## starts the match itself, so it never waits for its own seat; spectators never need to be ready.
+func not_ready(host_id: int) -> Array:
+	var out: Array = []
+	for id in players():
+		if int(id) != host_id and not bool(seats[id].get("ready", false)):
+			out.append(id)
+	return out
 
 
 func remove_player(id: int) -> void:
@@ -184,6 +224,7 @@ func _lose(id: int, cost: int) -> void:
 	if s.lives == 0 and bool(settings.get("second_chance", true)) and not bool(s.get("second_chance", false)):
 		s.lives = 1                               # the game's Second Chance (RunManager: lives 1 + event)
 		s.second_chance = true
+		s["sc_round"] = round_n                   # its comeback pick holds the next round open (COMEBACK_CAP)
 	elif s.lives == 0:
 		s.status = ELIMINATED
 		s.out_round = round_n

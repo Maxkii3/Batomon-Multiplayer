@@ -15,18 +15,26 @@ extends Control
 ## down (batomulti.return_to_menu: leaves the room, concludes / clears the lobby save, clears the
 ## rejoin record, goes to the title). "Hide" folds it into the bottom banner so the final board can
 ## be looked at; clicking "Results" there opens it again.
+## Look (0.6.7): the game's red-framed dialog + yellow title strip; the placement table scrolls (native scroll
+## bar) once there are more than MAX_ROWS players, so any room size fits the 640x360 screen.
 
 signal return_pressed()
+signal back_pressed()             # protocol 8: stay in this room for its next match (the others are not waited for)
 
-const COL_BG := Color(0.04, 0.04, 0.07, 0.94)
-const COL_HEAD := Color(0.62, 0.10, 0.12, 0.95)
-const COL_TEXT := Color(0.96, 0.96, 0.96)
-const COL_DIM := Color(0.62, 0.62, 0.70)
-const COL_GOLD := Color(1.0, 0.85, 0.4)
-const COL_ME := Color(0.20, 0.32, 0.55, 0.85)
-const WIDTH := 300.0
-const ROW := 16.0
-const HEAD := 46.0
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const COL_TEXT := UiTheme.DARK
+const COL_DIM := UiTheme.GREY
+const COL_GOLD := UiTheme.YELLOW_DARK
+const COL_ME := Color(UiTheme.BLUE, 0.25)
+const WIDTH := 320.0
+const ROW := 15.0
+const MAX_ROWS := 10
+const IN := 14.0                  # the dialog frame's side inset
+const TOP := 10.0
+const STRIP_H := 20.0
+const HEAD := TOP + STRIP_H + 4.0 + 16.0 + 14.0   # strip, headline, column titles
+const BTN_H := 20.0
+const COLS := [0.0, 32.0, 172.0, 212.0, 244.0]
 
 var client                      # match_client.gd
 var transport
@@ -35,28 +43,40 @@ var font_size := 8
 var collapsed := false          # "Hide": only the small Results button stays
 var shown_frames := 0           # tests / autopilot
 var _return: Button
+var _back: Button                 # "Back to room" (protocol 8)
 var _hide: Button
 var _show: Button
+var scroll: ScrollContainer       # the placement rows
+var list: Control
 
 
-func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
+func setup(p_client, p_transport, _p_font: Font, _p_size: int) -> void:
 	client = p_client
 	transport = p_transport
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = UiTheme.BODY_SIZE
+	theme = UiTheme.get_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_return = _button("Return to main menu", func(): return_pressed.emit())
-	_hide = _button("Hide", func(): set_collapsed(true))
-	_show = _button("Results", func(): set_collapsed(false))
+	scroll = UiTheme.scroll_box()
+	add_child(scroll)
+	list = Control.new()
+	list.mouse_filter = Control.MOUSE_FILTER_PASS
+	list.draw.connect(_draw_rows)
+	scroll.add_child(list)
+	_back = _button("Back to room", func(): back_pressed.emit(), "BmPrimary")
+	_back.tooltip_text = "Stay in this room for the next match (you are seated Not Ready)"
+	_return = _button("Main menu", func(): return_pressed.emit(), "")
+	_return.tooltip_text = "Leave the room and go back to the main menu"
+	_hide = _button("Hide", func(): set_collapsed(true), "")
+	_show = _button("Results", func(): set_collapsed(false), "BmPrimary")
 	visible = false
 
 
-func _button(text: String, cb: Callable) -> Button:
+func _button(text: String, cb: Callable, variation: String) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", font)
-	b.add_theme_font_size_override("font_size", font_size)
+	b.theme_type_variation = variation
 	b.pressed.connect(cb)
 	add_child(b)
 	return b
@@ -64,6 +84,11 @@ func _button(text: String, cb: Callable) -> Button:
 
 func should_show() -> bool:
 	return client != null and client.phase == "over" and not client.state.seats.is_empty()
+
+
+## The room still exists (the host or a successor keeps it): this player can stay for the next match.
+func can_go_back() -> bool:
+	return transport != null and str(transport.code) != "" and transport.host_id() != 0
 
 
 func set_collapsed(on: bool) -> void:
@@ -113,10 +138,14 @@ func headline() -> String:
 	return "You placed %s of %d." % [ordinal(p), n] if p > 0 else "The match is over."
 
 
+func visible_rows() -> int:
+	return clampi(client.state.standings().size(), 1, MAX_ROWS)
+
+
 func panel_rect() -> Rect2:
 	var vp := get_viewport_rect().size
-	var h: float = HEAD + ROW * (client.state.standings().size() + 1) + 34.0
-	return Rect2(Vector2((vp.x - WIDTH) / 2.0, maxf(8.0, (vp.y - h) / 2.0 - 10.0)), Vector2(WIDTH, h))
+	var h: float = HEAD + ROW * visible_rows() + 8.0 + BTN_H + TOP + 2.0
+	return Rect2(Vector2(floorf((vp.x - WIDTH) / 2.0), floorf(maxf(4.0, (vp.y - h) / 2.0 - 10.0))), Vector2(WIDTH, h))
 
 
 func _process(_d: float) -> void:
@@ -134,47 +163,71 @@ func _layout() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE if collapsed else Control.MOUSE_FILTER_STOP
 	var r := panel_rect()
 	_return.visible = true
+	_back.visible = can_go_back()
 	_hide.visible = not collapsed
 	_show.visible = collapsed
+	scroll.visible = not collapsed and should_show()
 	if collapsed:
 		# bottom-right corner, sized to their text, never overlapping the centred banner text
 		var vp := get_viewport_rect().size
 		_show.size = _show.get_combined_minimum_size()
 		_return.size = _return.get_combined_minimum_size()
+		_back.size = _back.get_combined_minimum_size()
 		_show.position = Vector2(vp.x - _show.size.x - 4.0, vp.y - _show.size.y - 4.0)
 		_return.position = Vector2(_show.position.x - _return.size.x - 4.0, _show.position.y)
+		_back.position = Vector2(_return.position.x - _back.size.x - 4.0, _show.position.y)
 		return
-	_return.position = Vector2(r.position.x + 8.0, r.end.y - 26.0)
-	_return.size = Vector2(WIDTH - 70.0, 20)
-	_hide.position = Vector2(r.end.x - 56.0, r.end.y - 26.0)
-	_hide.size = Vector2(48, 20)
+	var by := r.end.y - TOP - BTN_H - 2.0
+	var bw := WIDTH - IN * 2 - 62.0                 # Back to room + Main menu share the row left of Hide
+	if _back.visible:
+		_back.position = Vector2(r.position.x + IN, by)
+		_back.size = Vector2(floorf(bw * 0.55) - 2.0, BTN_H)
+		_return.position = Vector2(_back.position.x + _back.size.x + 4.0, by)
+		_return.size = Vector2(bw - _back.size.x - 4.0, BTN_H)
+	else:
+		_return.position = Vector2(r.position.x + IN, by)
+		_return.size = Vector2(bw, BTN_H)
+	_hide.position = Vector2(r.end.x - IN - 56.0, by)
+	_hide.size = Vector2(56, BTN_H)
+	scroll.position = Vector2(r.position.x + IN, r.position.y + HEAD)
+	scroll.size = Vector2(WIDTH - IN * 2, ROW * visible_rows())
+	var bar := scroll.get_v_scroll_bar().get_combined_minimum_size().x + 2.0 if client.state.standings().size() > MAX_ROWS else 0.0
+	list.custom_minimum_size = Vector2(WIDTH - IN * 2 - bar, ROW * client.state.standings().size())
+	list.queue_redraw()
 
 
 func _draw() -> void:
 	if client == null or collapsed or not should_show():
 		return
 	var r := panel_rect()
-	draw_rect(r, COL_BG)
-	draw_rect(Rect2(r.position, Vector2(WIDTH, 22)), COL_HEAD)
-	_text(r.position + Vector2(8, 15), "GAME OVER", COL_GOLD, font_size + 2)
-	_text(r.position + Vector2(8, 38), headline(), COL_TEXT, font_size)
-	var y := r.position.y + HEAD
-	var cols := [8.0, 40.0, 180.0, 220.0, 252.0]
+	UiTheme.draw_box(self, "BmDialog", r)
+	UiTheme.draw_box(self, "BmStrip", Rect2(r.position + Vector2(IN - 4, TOP), Vector2(WIDTH - IN * 2 + 8, STRIP_H)))
+	UiTheme.draw_text(self, UiTheme.font_title(), r.position + Vector2(IN, TOP + 1), "GAME OVER", UiTheme.TITLE_SIZE, UiTheme.WHITE,
+		-1, HORIZONTAL_ALIGNMENT_LEFT, UiTheme.BTN_SHADOW)
+	UiTheme.draw_text(self, font, r.position + Vector2(IN, TOP + STRIP_H + 4), headline(), font_size, COL_TEXT)
+	var y := r.position.y + HEAD - 14.0
 	for i in 5:
-		_text(Vector2(r.position.x + cols[i], y + 11), ["#", "Player", "Lives", "Wins", ""][i], COL_DIM, font_size)
+		UiTheme.draw_text(self, font, Vector2(r.position.x + IN + COLS[i] + 2, y), ["#", "Player", "Lives", "Wins", ""][i], font_size, COL_DIM)
+
+
+## The placement rows, drawn on `list` (scrolls inside `scroll`).
+func _draw_rows() -> void:
+	if client == null or collapsed or not should_show():
+		return
 	var me: int = transport.self_id if transport != null else 0
+	var y := 0.0
+	var i := 0
 	for p in placements(client.state):
-		y += ROW
 		var s: Dictionary = p[1]
+		if i % 2 == 1:
+			list.draw_rect(Rect2(0, y, list.size.x, ROW), Color(UiTheme.INSET, 0.6))
 		if int(s.id) == me:
-			draw_rect(Rect2(Vector2(r.position.x + 4, y), Vector2(WIDTH - 8, ROW - 1)), COL_ME)
+			list.draw_rect(Rect2(0, y, list.size.x, ROW), COL_ME)
 		var c := COL_GOLD if int(p[0]) == 1 else COL_TEXT
 		var tag := "winner" if int(p[0]) == 1 else ("left" if str(s.status) == "left" else "out R%d" % int(s.get("out_round", 0)))
 		var vals := [ordinal(int(p[0])), str(s.name), str(int(s.lives)), str(int(s.wins)), tag]
-		for i in 5:
-			_text(Vector2(r.position.x + cols[i], y + 11), vals[i], c if i < 2 else COL_TEXT, font_size)
-
-
-func _text(pos: Vector2, s: String, col: Color, size: int) -> void:
-	draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 3, Color.BLACK)
-	draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
+		for k in 5:
+			var w: float = (COLS[k + 1] - COLS[k] - 4.0) if k < 4 else list.size.x - COLS[k]
+			UiTheme.draw_text(list, font, Vector2(COLS[k] + 2, y + 2), vals[k], font_size, c if k < 2 else COL_TEXT, w)
+		y += ROW
+		i += 1

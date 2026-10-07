@@ -40,6 +40,7 @@ signal welcomed(token: String)
 signal synced(snap: Dictionary)
 signal eliminated()
 signal shop_live_updated(id: int)
+signal kicked(why: String)
 
 var t
 var state = LobbyState.new()
@@ -48,6 +49,10 @@ var round_n := 0
 var name := ""
 var mod_version := ""
 var game_version := ""
+var password := ""                # the room password I join with (HELLO pw; protocol 7)
+var last_reject: Dictionary = {}  # the host's last REJECT body (why + pw_tries / pw_max / pw_wait)
+var guard: Dictionary = {}        # GUARD from the host (I may take over): password, ban list, lockouts
+var alumni: Dictionary = {}       # Back to room: who played the finished match (id -> name; a successor host lets them back in)
 var resolver: Callable = func(b0, b1, r, s): return Canonical.run(b0, b1, r, s)
 
 var now := 0.0
@@ -62,7 +67,14 @@ var fights: Dictionary = {}       # round -> {opp, seed, side0, board, bye, cano
 var fight: Dictionary = {}
 var at_shop_round := 0
 var spectate_target := 0
-var shop_live: Dictionary = {}    # spectators: player id -> {round, seq, view, at} (live shop mirror)
+var shop_live: Dictionary = {}    # spectators: the WATCHED player id -> {round, seq, view, at} (live shop mirror)
+## Targeted streaming (protocol 7): the host only sends the shop of the player announced with WATCH.
+var watch_sent := -1              # the target last announced (-1 = never)
+var _watch_host := 0              # ... to this host (a new host after a migration gets it again)
+var _watch_at := -1000.0
+const WATCH_GAP_RETRY := 0.5      # s between "send me a keyframe" asks after a lost delta
+const LOADING_SECONDS := 3.0
+const LOBBY_RESYNC_GAP := 1.0     # s between "send me the whole state" asks after a patch did not add up      # after a switch: "loading" until the new player's first keyframe
 var shop_seq := 0                 # my shopview counter
 var _shop_hash := ""
 var shop_sent_log: Array = []     # [round, seq, hash, unix time, board sig, chest sig] per new shop version (live report cross-check)
@@ -94,14 +106,14 @@ func joined() -> void:
 	if phase == "idle":
 		phase = "lobby"
 	_last_host_msg = now
-	_send(P.HELLO, {"proto": P.VERSION, "mod": mod_version, "game": game_version, "name": name, "token": token})
+	_send(P.HELLO, {"proto": P.VERSION, "mod": mod_version, "game": game_version, "name": name, "token": token, "pw": password})
 	changed.emit()
 
 
 ## Rejoin after a disconnect / crash / host migration: same HELLO, with the session token.
 func rejoin() -> void:
 	_last_host_msg = now
-	_send(P.HELLO, {"proto": P.VERSION, "mod": mod_version, "game": game_version, "name": name, "token": token})
+	_send(P.HELLO, {"proto": P.VERSION, "mod": mod_version, "game": game_version, "name": name, "token": token, "pw": password})
 
 
 func leave() -> void:
@@ -126,6 +138,10 @@ func reset() -> void:
 	_over_emitted = false
 	spectate_target = 0
 	shop_live = {}
+	watch_sent = -1
+	_watch_host = 0
+	guard = {}
+	alumni = {}
 	_shop_hash = ""
 	_shop_sent_at = -1000.0
 	state = LobbyState.new()
@@ -156,6 +172,31 @@ func request_role(id: int, role: String) -> void:
 		_send(P.ROLE, {"id": id, "role": role})
 
 
+## Lobby Ready check (protocol 8): my Ready / Not Ready; the next lobby state shows it.
+func set_lobby_ready(on: bool) -> void:
+	if phase == "lobby":
+		_send(P.LREADY, {"on": on})
+
+
+## After game over (protocol 8): I stay in this room for its next match. The finished match is dropped
+## here (results left on my own, nobody waits for me); the host seats me in the room's new lobby, Not
+## Ready. The room password I joined with and the next-host guard are kept (a later host change).
+func back_to_room() -> void:
+	var keep_pw := password
+	var keep_guard := guard.duplicate(true)
+	var played := {}
+	for id in state.seats:
+		played[int(id)] = str(state.seats[id].name)
+	reset()
+	password = keep_pw
+	guard = keep_guard
+	alumni = played
+	phase = "lobby"
+	_last_host_msg = now
+	_send(P.BACK, {"name": name})
+	changed.emit()
+
+
 func seconds_left() -> float:
 	return maxf(0.0, _deadline - now) if phase in ["shop", "ready_wait"] or (phase == "spectating" and state.phase == "shop") else 0.0
 
@@ -163,6 +204,7 @@ func seconds_left() -> float:
 ## Called every frame by the glue (or the test clock): stall watchdog.
 func tick(p_now: float) -> void:
 	now = p_now
+	sync_watch()
 	if not in_match() or t == null or t.host_id() == 0 or t.host_id() == t.self_id:
 		return
 	if now - _last_host_msg > STALL and now - _last_sync_req > STALL:
@@ -188,13 +230,22 @@ func handle(from: int, msg: Dictionary) -> void:
 	match msg.t:
 		P.REJECT:
 			reset()
+			last_reject = b.duplicate()
 			rejected.emit(str(b.why))
+		P.KICK:
+			reset()
+			kicked.emit(str(b.why))
+		P.GUARD:
+			guard = b.duplicate(true)
+			return
 		P.WELCOME:
 			token = str(b.token)
 			epoch = maxi(epoch, int(b.epoch))
 			welcomed.emit(token)
 		P.LOBBY:
 			_take_state(b.state)
+		P.LOBBY_PATCH:
+			_on_lobby_patch(b)
 		P.START:
 			if phase in ["idle", "lobby"]:
 				phase = "starting"
@@ -334,12 +385,43 @@ func _take_state(d: Dictionary, force := false) -> void:
 		stats.stale_dropped += 1
 
 
+## Protocol 7: the seats / top fields that changed, on top of the state the host knows I hold. A patch
+## onto nothing (I lost my state) asks for the whole one.
+func _on_lobby_patch(b: Dictionary) -> void:
+	if int(b.rev) < state.rev:
+		stats.stale_dropped += 1
+		return
+	if int(b.base) != state.rev or state.seats.is_empty() and phase != "idle":
+		_bump("lobby_gap")                        # not built on what I hold (lost / overtaken): ask for the whole state
+		if now - _last_sync_req >= LOBBY_RESYNC_GAP:
+			request_sync()
+		return
+	for sid in b.gone:
+		state.seats.erase(sid)
+	for sid in b.seats:
+		if b.seats[sid] is Dictionary:
+			state.seats[sid] = b.seats[sid]
+	var top: Dictionary = b.top
+	if not top.is_empty():
+		state.settings = LobbyState.DEFAULT_SETTINGS.duplicate()
+		state.settings.merge(top.get("settings", {}), true)
+		state.phase = str(top.get("phase", state.phase))
+		state.round_n = int(top.get("round", state.round_n))
+		state.lobby_seed = int(top.get("lobby_seed", state.lobby_seed))
+	state.rev = int(b.rev)
+	if P.seats_sum(state.seats, state.phase, state.round_n) != int(b.sum):
+		_bump("lobby_resync")                     # something was lost on the way: take the whole state again
+		if now - _last_sync_req >= LOBBY_RESYNC_GAP:
+			request_sync()
+
+
 ## `out` = eliminated (the glue says so and offers the hub); false = a dedicated spectator.
 func _become_spectator(out := true) -> void:
 	phase = "spectating"
 	_last_ready = {}
 	var alive: Array = spectate_targets()
 	spectate_target = alive[0] if not alive.is_empty() else 0
+	sync_watch()
 	if out:
 		eliminated.emit()
 
@@ -477,6 +559,20 @@ func submit(board: Dictionary, run: Dictionary = {}) -> void:
 	changed.emit()
 
 
+## Cancel after Battle! (0.6.7): back to the shop, the locked board taken back (the host checks it is not
+## too late). False = not possible: the round already started (my fight is here), the timer is over, or
+## I am not waiting.
+func unready() -> bool:
+	if phase != "ready_wait" or state.phase != "shop" or seconds_left() <= 0.0 or not fight_for(round_n).is_empty():
+		return false
+	_send(P.UNREADY, {"round": round_n})
+	_last_ready = {}
+	phase = "shop"
+	_bump("unready")
+	changed.emit()
+	return true
+
+
 ## The board this player locked in for round r ("" when none).
 func submitted_hash(r: int) -> String:
 	return str(_last_ready.get("hash", "")) if int(_last_ready.get("round", -1)) == r else ""
@@ -523,12 +619,28 @@ func send_shop_view(r: int, view: Dictionary, sig := "", chest := "") -> bool:
 
 func _on_shop_live(b: Dictionary) -> void:
 	var id := int(b.id)
+	if id != spectate_target:
+		_bump("shop_other")                       # sent before the host saw my switch: not shown any more
+		return
 	var old: Dictionary = shop_live.get(id, {})
 	if not old.is_empty() and (int(old.round) > int(b.round) or int(old.round) == int(b.round) and int(old.seq) >= int(b.seq)):
 		return
 	var v := P.unpack_board(b.data, int(b.raw), "", "")
-	if v.is_empty():
+	if int(b.base) != 0 and not v.is_empty():
+		if old.is_empty() or int(old.round) != int(b.round) or int(old.seq) != int(b.base):
+			v = {}                                # the version under this delta never arrived
+		else:
+			v = P.apply_delta(old.view, v)
+		if v.is_empty():
+			_bump("shop_gap")
+			if now - _watch_at >= WATCH_GAP_RETRY:
+				sync_watch(true)                  # WATCH again = the host answers with a keyframe
+			return
+		_bump("shop_delta")
+	elif v.is_empty():
 		return
+	else:
+		_bump("shop_keyframe")
 	shop_live[id] = {"round": int(b.round), "seq": int(b.seq), "view": v, "at": now}
 	if shop_recv_log.size() < SHOP_LOG_CAP:
 		shop_recv_log.append([id, int(b.round), int(b.seq), P.hash_bytes(var_to_bytes(v)).substr(0, 16), Time.get_unix_time_from_system(),
@@ -575,6 +687,35 @@ func report(local_winner: int) -> void:
 
 # ------------------------------------------------------------ spectating
 
+func _bump(k: String) -> void:
+	stats[k] = int(stats.get(k, 0)) + 1
+
+
+## Tells the host whom I watch (WATCH, protocol 7) when the target changed, or the host did (a
+## migration); force = ask again (a delta arrived without its base). Only the watched player's live shop
+## is kept: switching back to someone shows their newest view once its keyframe arrives.
+func sync_watch(force := false) -> void:
+	if t == null or t.host_id() == 0 or phase != "spectating":
+		return
+	var want := spectate_target
+	if not force and want == watch_sent and t.host_id() == _watch_host:
+		return
+	if want != watch_sent:
+		for k in shop_live.keys():
+			if int(k) != want:
+				shop_live.erase(k)
+	watch_sent = want
+	_watch_host = t.host_id()
+	_watch_at = now
+	_bump("watch_sent")
+	_send(P.WATCH, {"id": want})
+
+
+## Just switched and the new player's live shop is not here yet (the spectator screen says "loading").
+func watch_loading() -> bool:
+	return phase == "spectating" and spectate_target != 0 and shop_view_of(spectate_target).is_empty() \
+		and now - _watch_at < LOADING_SECONDS
+
 ## Players a spectator can watch: everyone still alive, in seat order.
 func spectate_targets() -> Array:
 	var out: Array = state.alive_ids()
@@ -589,6 +730,7 @@ func spectate_step(dir: int) -> int:
 	else:
 		var i := list.find(spectate_target)
 		spectate_target = list[posmod((i if i >= 0 else 0) + (dir if i >= 0 else 0), list.size())]
+	sync_watch()
 	changed.emit()
 	return spectate_target
 
@@ -596,6 +738,7 @@ func spectate_step(dir: int) -> int:
 func spectate(id: int) -> void:
 	if id in spectate_targets():
 		spectate_target = id
+		sync_watch()
 		changed.emit()
 
 

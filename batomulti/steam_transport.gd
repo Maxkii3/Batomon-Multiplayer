@@ -34,6 +34,10 @@ var _check_at := 0
 var _avatars: Dictionary = {}      # id -> ImageTexture
 var _authority := 0
 var _owner_sync_at := 0
+var _browsing := false              # list_rooms: the next lobby list answer is for the browser
+var _info_sent: Dictionary = {}     # lobby data key -> value written (changed keys only)
+const INFO_KEYS := ["name", "locked", "state", "state_n", "round", "players", "max_p", "specs", "max_s", "speed",
+	"lives", "shop", "host_name", "version"]
 
 
 static func available() -> bool:
@@ -71,12 +75,24 @@ func _const(name: String, fallback: int) -> int:
 
 ## The code must not belong to another live BatoMulti lobby (joiners take the first hit), so the
 ## lobby list is searched for it first; createLobby only runs when nobody has it.
-func create_room(room_code: String, max_players: int) -> void:
+func create_room(room_code: String, max_members: int) -> void:
+	_browsing = false
+	_info_sent = {}
 	_pending_code = room_code
 	_checking = true
-	_check_max = max_players
+	_check_max = max_members
+	member_limit = max_members
 	_check_at = Time.get_ticks_msec()
 	_request_code_list(room_code)
+
+
+## Host: room size changed in the lobby -> the Steam lobby's member limit follows (before the lobby
+## exists, the pending createLobby uses it).
+func set_member_limit(max_members: int) -> void:
+	member_limit = max_members
+	_check_max = max_members
+	if _lobby_id != 0 and _steam.has_method("setLobbyMemberLimit"):
+		_steam.setLobbyMemberLimit(_lobby_id, max_members)
 
 
 func _request_code_list(room_code: String) -> void:
@@ -113,10 +129,69 @@ func _on_lobby_created(result: int, lobby_id: int) -> void:
 func join_room(room_code: String) -> void:
 	_pending_code = room_code
 	_checking = false
+	_browsing = false
 	_request_code_list(room_code)
 
 
+func join_room_id(id) -> void:
+	_browsing = false
+	_steam.joinLobby(int(id))
+
+
+## Host: public lobby data for the browser (bm_<key>), only the keys whose value changed. A finished
+## match is no longer joinable.
+func set_room_info(info: Dictionary) -> void:
+	super(info)
+	if _lobby_id == 0 or _authority != self_id:
+		return
+	for k in INFO_KEYS:
+		var v := ("1" if info.get(k) else "0") if k == "locked" else str(info.get(k, ""))
+		if str(_info_sent.get(k, "\u0001")) != v:
+			_info_sent[k] = v
+			_steam.setLobbyData(_lobby_id, "bm_" + k, v)
+	if str(info.get("state", "")) == "over" and str(_info_sent.get("joinable", "")) != "0":
+		_info_sent["joinable"] = "0"
+		_steam.setLobbyJoinable(_lobby_id, false)
+	elif str(info.get("state", "")) == "lobby" and str(_info_sent.get("joinable", "")) == "0":
+		_info_sent["joinable"] = "1"                         # protocol 8: the room reopened after its match (Back to room)
+		_steam.setLobbyJoinable(_lobby_id, true)
+
+
+## Browser search (design §2.2): BatoMulti rooms of my protocol (+ my version unless other_versions),
+## In lobby / Playing on Steam's side when only one of them is wanted, worldwide, 50 results.
+func list_rooms(filters: Dictionary = {}) -> void:
+	_browsing = true
+	_steam.addRequestLobbyListStringFilter("bm", "1", _const("LOBBY_COMPARISON_EQUAL", 0))
+	_steam.addRequestLobbyListStringFilter("bm_proto", str(Protocol.VERSION), _const("LOBBY_COMPARISON_EQUAL", 0))
+	if not bool(filters.get("other_versions", false)) and str(filters.get("version", "")) != "":
+		_steam.addRequestLobbyListStringFilter("bm_version", str(filters.version), _const("LOBBY_COMPARISON_EQUAL", 0))
+	var lob := bool(filters.get("in_lobby", true))
+	var play := bool(filters.get("playing", true))
+	if lob != play and _steam.has_method("addRequestLobbyListNumericalFilter"):
+		_steam.addRequestLobbyListNumericalFilter("bm_state_n", 0 if lob else 1, _const("LOBBY_COMPARISON_EQUAL", 0))
+	_steam.addRequestLobbyListDistanceFilter(_const("LOBBY_DISTANCE_FILTER_WORLDWIDE", 3))
+	if _steam.has_method("addRequestLobbyListResultCountFilter"):
+		_steam.addRequestLobbyListResultCountFilter(50)
+	_steam.requestLobbyList()
+
+
+func _browse_rows(lobbies: Array) -> Array:
+	var rows: Array = []
+	for l in lobbies:
+		var id := int(l)
+		var r := {"id": id, "code": str(_steam.getLobbyData(id, "bm_code")), "proto": int(str(_steam.getLobbyData(id, "bm_proto"))),
+			"members": int(_steam.getNumLobbyMembers(id))}
+		for k in INFO_KEYS:
+			r[k] = str(_steam.getLobbyData(id, "bm_" + k))
+		rows.append(r)
+	return rows
+
+
 func _on_lobby_match_list(lobbies: Array) -> void:
+	if _browsing:
+		_browsing = false
+		rooms_listed.emit(_browse_rows(lobbies))
+		return
 	if _checking:
 		var taken := false
 		for l in lobbies:

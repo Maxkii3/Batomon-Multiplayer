@@ -1,21 +1,69 @@
-# BatoMulti 0.6.6 — play with your friends!
+# BatoMulti 0.6.7 — room browser, passwords and big rooms
 
-Batomon Showdown, multiplayer: create a private room, share the code, and battle your friends round
-after round until one trainer is left.
+Batomon Showdown, multiplayer: create a room, share the code (or let people find it in the new room
+browser), and battle round after round until one trainer is left.
 
-## New in this build (0.6.6)
+## New in this build (0.6.7)
 
-- ⏩ **Faster battles: x6 and x8.** The host's battle speed now goes x1, x2, x4, x6 and x8, shown as
-  buttons: the room's speed is lit in yellow, so everyone can see it at a glance.
-- 📋 **Copy the room code.** The room code is shown in bright yellow, with a **Copy** button next to it
-  — one click puts the code on your clipboard ("Copied!"), ready to paste to your friends.
-- 🎁 **Second Chance trinket by day.** The comeback *Trinket* choice now has a fixed rarity per day:
-  Common (Day 1-2), Rare (3-5), Super Rare (6-10), Legendary (11-16), Mythical (17+). If that rarity
-  has fewer than 3 trinkets to offer, you get the next rarity down.
-- 🔄 **On 0.6.2 – 0.6.5? Update from the main menu.** Start the game: the banner offers 0.6.6 →
+- 🏆 **Community tournaments in a single match.** With rooms of up to **250 participants** (players +
+  spectators), a whole mini-tournament is now just one BatoMulti match: everyone battles round after
+  round in the same room until one champion is left, the live leaderboard ranks everybody, and the
+  results screen gives every placement. Spectators can follow any player live. No external bracket
+  tools, no separate games to schedule — share one room code (and a password if it's invite-only).
+- 🔎 **Room browser.** A new **Browse rooms** tab in the Multiplayer window lists open rooms: room name,
+  host, players, spectators, status (In lobby / Playing) and battle speed. Search by name or code,
+  filter In lobby / Playing / Other versions, press **Refresh** (it also refreshes by itself every
+  15 seconds), and **Join** with one click. Joining by code works as before.
+- 🔒 **Room names and passwords.** Name your room when you create it, and add a password if you want.
+  Password rooms show a lock in the browser and ask for the password on Join. A wrong password keeps
+  the prompt open, gives the field back for retyping and shows the tries used (*"Wrong password (1/3
+  tries)"*); three wrong tries lock that player out for a minute with a live countdown. A refused try
+  never puts you in the room. Players who reconnect to a match they were already in don't need
+  to type it again.
+- 👢 **Host Kick.** Every member in the host's list has a red **Kick** button (press **Kick**, then
+  **Sure?**). The kicked player sees *"You were kicked by the host"* and can't come back to that room,
+  even after the host changes.
+- 🏟️ **Big rooms, up to 250.** The host sets **Max players** and **Spectators** for the room (together up
+  to 250, Steam's lobby limit). Spectators now count toward the Steam lobby size too, so a room with
+  every player seat filled still lets spectators in (in 0.6.6 they were turned away on Steam).
+- 📜 **Scrolling member list.** The member list next to the lobby scrolls once there are more than 8
+  people, and every row keeps its Player / Spectator and Kick buttons. Long names are shortened with
+  "..." everywhere (hover to see the full name), so nothing overlaps.
+- ↩️ **Cancel after Battle!** Pressed Battle! too early? Press **Cancel** on the "searching" popup to go
+  back to your shop while others are still shopping, then press Battle! again. If everyone is already
+  ready, the battle starts as usual.
+- ✅ **Ready check.** Players press the big **Ready Up!** button under the member list (it turns green
+  when you're ready; press again to cancel), and everyone sees who is ready from the dots next to the
+  names. The host's **Start match** starts once all players are ready; to start without waiting, the
+  host presses the red **Force Start**, then **Confirm Force Start?**.
+- 🔌 **Much stronger reconnect.** Game crashed or closed by accident mid-match? Start it again: BatoMulti
+  rejoins your match in the background and puts you back in your shop with your run, lives and gold.
+  It never turns into a solo run, and an old or finished match never pops up on a normal start. A
+  dropped player shows as **OFFLINE** on the leaderboard and never holds up the others: their last
+  board fights for them until they're back (after 90 s away the seat is given up).
+- 🏁 **Last one standing wins at once.** When every other player has left, the survivor goes straight
+  to the results — no more waiting on "Waiting for other players to finish...".
+- ↩️ **Back to room.** After the results, **Back to room** takes you to the same room for another match
+  (the host can leave meanwhile; the room keeps going).
+- ⏱️ **Comeback timer.** The Second Chance pick counts down from 60 seconds; if you don't choose,
+  Scaling Gold is taken for you so the room never waits. Once you're out of lives, no more event or
+  gift-box popups.
+- 🎨 **Looks like the game.** Every BatoMulti screen (lobby, leaderboard, results, spectator bar,
+  elimination card, update banner) now uses the game's own buttons, cards, fonts and colours.
+- 📡 **Smoother spectating in big rooms.** Spectators only receive the shop of the player they're
+  watching (switching shows *Loading...* for a moment), which keeps the host's upload low in big rooms.
+- 🔄 **On 0.6.2 – 0.6.6? Update from the main menu.** Start the game: the banner offers 0.6.7 →
   **[Update Now]** → **[Restart Now]**. On 0.6.1 or older, run this setup file once by hand.
-- 🤝 **Everyone in a room needs 0.6.6.** A room only accepts players with exactly the same BatoMulti
-  version, so 0.6.5 and older can't join a 0.6.6 room (and the other way round).
+- 🤝 **Everyone in a room needs 0.6.7.** A room only accepts players with exactly the same BatoMulti
+  version, so 0.6.6 and older can't join a 0.6.7 room (and the other way round). Rooms from 0.6.6
+  and older don't appear in the browser.
+
+## In 0.6.6
+
+- ⏩ **Faster battles: x6 and x8**, shown as buttons with the room's speed lit in yellow.
+- 📋 **Copy the room code** with one click.
+- 🎁 **Second Chance trinket by day:** Common (Day 1-2), Rare (3-5), Super Rare (6-10), Legendary
+  (11-16), Mythical (17+).
 
 ## In 0.6.5
 
@@ -59,7 +107,7 @@ after round until one trainer is left.
 
 ## Install in 3 steps
 
-1. Download **`BatoMulti-Setup-0.6.6.cmd`** below.
+1. Download **`BatoMulti-Setup-0.6.7.cmd`** below.
 2. Close the game and **double-click the file** (press Enter to confirm). It finds your game and
    handles backups for you.
 3. Start Batomon Showdown through Steam → **Multiplayer** → create or join a room.
@@ -69,8 +117,11 @@ and restored exactly as it was when you uninstall.
 
 ## What's inside
 
-- 🔑 **Private rooms** with a room code (random, or your own 4-8 letters / digits)
-- ⏩ **Battle speed** 1x / 2x / 4x / 6x / 8x, chosen by the host
+- 🔎 **Room browser** with search and filters, **room names** and optional **passwords**
+- 🔑 **Room codes** (random, or your own 4-8 letters / digits) for joining directly
+- 🏟️ **Up to 250 people per room** (players + spectators), set by the host — a whole community
+  tournament in one match; host **Kick**
+- ⏩ **Battle speed** 1x / 2x / 4x / 6x / 8x, chosen by the host; **Cancel** after Battle!
 - 💔 **Revamped Second Chance** — come back with 1 life and pick: Board Upgrade, Element Infusion,
   a Trinket (rarity grows with the day), or Scaling Gold
 - ⚔️ **Next match preview** — see who you fight next while you shop
@@ -83,7 +134,7 @@ Everyone in the room needs the same BatoMulti version. Windows + Steam version o
 
 ## Uninstall
 
-Close the game and run the same file again (or `BatoMulti-Setup-0.6.6.cmd uninstall`).
+Close the game and run the same file again (or `BatoMulti-Setup-0.6.7.cmd uninstall`).
 Manual removal and going back to pure vanilla (Steam → Verify integrity of game files): see
 [How to uninstall](https://github.com/Maxkii3/Batomon-Multiplayer#-how-to-uninstall) in the README.
 

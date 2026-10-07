@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.6"
+const VERSION := "0.6.7"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -31,10 +31,13 @@ const CFG_PATH := "user://batomulti.cfg"
 const RUN_DATA := "res://game/run/run_data.gd"
 const P := preload("res://batomulti/protocol.gd")
 const RoomCode := preload("res://batomulti/room_code.gd")
+const LobbyState := preload("res://batomulti/lobby_state.gd")
+const UiTheme := preload("res://batomulti/ui_theme.gd")
 const SteamTransport := preload("res://batomulti/steam_transport.gd")
 const MockTransport := preload("res://batomulti/mock_transport.gd")
 const MatchClient := preload("res://batomulti/match_client.gd")
 const MatchSession := preload("res://batomulti/match_session.gd")
+const MatchHost := preload("res://batomulti/match_host.gd")
 const Canonical := preload("res://batomulti/canonical_battle.gd")
 const LobbyPanel := preload("res://batomulti/lobby_panel.gd")
 const Leaderboard := preload("res://batomulti/leaderboard.gd")
@@ -159,9 +162,35 @@ var _lobby_run_id := ""
 var _pending_settings: Dictionary = {}
 var _rejoin_until := 0.0            # auto-rejoin window after connection_lost
 var _next_rejoin := 0.0
+var _auto_rejoin_done := false      # the title's automatic rejoin ran (once per game start)
+var auto_rejoins := 0               # tests
+var silent_rejoin := false          # the title's background rejoin is in flight (no UI until it worked)
+var _silent_since := 0.0
+const SILENT_REJOIN_WAIT := 25.0    # s the background rejoin may take (Steam lobby search + hello) before it is dropped
+var silent_rejoin_failures := 0     # tests
+var stale_purged := 0               # tests
 var _skip_intro := false            # test environment: pass the title's "press any key" by itself
 var _skip_at := 0
 var control = null                  # dev_control.gd (test environment only)
+var menu_notice := ""               # shown in the Multiplayer panel when the title screen is back (e.g. kicked)
+var _search_gen := 0                # +1 = the running Battle! search was cancelled (opponent_for_round gives up)
+var _searching := false             # opponent_for_round is waiting for the room
+var _shop_cancel_button: WeakRef = null   # my shop UI (its cancel_button = the searching popup's Cancel)
+var unready_count := 0              # tests / live report: Cancel after Battle! accepted
+var cancel_late := 0                # ... too late (the battle won): the player was sent into it again
+var kicked_count := 0               # tests / live report
+## Comeback pick timeout (protocol 8, operator 2026-10-07): the Second Chance screen counts down
+## COMEBACK_PICK_SECONDS, then Scaled Gold is taken for the player (no target needed) so the room moves on.
+var comeback_timer: Label           # "Choose your comeback: 0:42" over the event screen
+var _comeback_since := -1.0         # real s the comeback screen opened (-1 = not on it)
+var _comeback_screen: WeakRef = null
+var comeback_auto_picks := 0        # tests / live report
+var comeback_pick_seconds := -1.0   # tests: shorter countdown (-1 = MatchHost.COMEBACK_PICK_SECONDS)
+var comeback_test_state = null      # tests: the event scene the harness opened (no game state machine there)
+var events_suppressed := 0          # post-battle events / gift picks skipped because I am out for good
+var early_reports := 0              # battle results sent from the post-battle event / gift screen
+var back_to_room_count := 0         # tests / live report: Back to room pressed
+var _open_panel_on_title := false   # Back to room: the Multiplayer panel opens on the title screen
 
 
 func _ready() -> void:
@@ -248,6 +277,20 @@ func _ready() -> void:
 	results = ResultsView.new()
 	results.setup(client, transport, font, 8)
 	results.return_pressed.connect(return_to_menu)
+	results.back_pressed.connect(back_to_room)
+	comeback_timer = Label.new()
+	comeback_timer.name = "BatoMultiComebackTimer"
+	comeback_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	comeback_timer.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	comeback_timer.offset_top = 4.0
+	comeback_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	comeback_timer.add_theme_font_override("font", UiTheme.font_title())
+	comeback_timer.add_theme_font_size_override("font_size", UiTheme.TITLE_SIZE)
+	comeback_timer.add_theme_color_override("font_color", UiTheme.YELLOW)
+	comeback_timer.add_theme_color_override("font_outline_color", UiTheme.DARK)
+	comeback_timer.add_theme_constant_override("outline_size", 6)
+	comeback_timer.visible = false
+	layer.add_child(comeback_timer)
 	layer.add_child(results)                            # topmost: the match is over
 	updater = Updater.new()
 	updater.name = "BatoMultiUpdater"
@@ -395,6 +438,10 @@ func _ui_script(role: String, out: String) -> void:
 		_shot(out.path_join("ui_%s_lobby.png" % role))
 		await get_tree().create_timer(0.3).timeout
 		ok.call("Start enabled for the host", not panel._start_btn.disabled)
+		t0 = Time.get_ticks_msec()
+		while not not_ready_names().is_empty() and Time.get_ticks_msec() - t0 < 20000:
+			await get_tree().process_frame
+		ok.call("every guest pressed Ready", not_ready_names().is_empty())
 		panel._start_btn.pressed.emit()
 	else:
 		t0 = Time.get_ticks_msec()
@@ -404,6 +451,8 @@ func _ui_script(role: String, out: String) -> void:
 			await get_tree().create_timer(1.0).timeout
 		ok.call("joined room %s by typing the code" % code, client.phase == "lobby")
 		await get_tree().create_timer(1.0).timeout
+		panel.refresh()
+		panel.ready_btn.pressed.emit()                     # protocol 8: the host's Start waits for it
 		_shot(out.path_join("ui_%s_lobby.png" % role))
 	t0 = Time.get_ticks_msec()
 	while not lobby_run_live() and Time.get_ticks_msec() - t0 < 30000:
@@ -498,6 +547,8 @@ func _wire_client() -> void:
 	client.welcomed.connect(_on_welcomed)
 	client.synced.connect(_on_synced)
 	client.eliminated.connect(_on_eliminated)
+	client.kicked.connect(_on_kicked)
+	client.round_started.connect(_on_round_started)
 
 
 # ------------------------------------------------------------ main menu
@@ -505,6 +556,9 @@ func _wire_client() -> void:
 func _on_node_added(n: Node) -> void:
 	if n is ShopUI and not n.reroll_requested.is_connected(_on_shop_reroll):
 		n.reroll_requested.connect(_on_shop_reroll)
+	if n is ShopUI and not (broadcast != null and broadcast.is_ancestor_of(n)) and not n.cancel_requested.is_connected(_on_shop_cancel):
+		n.cancel_requested.connect(_on_shop_cancel)  # (runs before shop_state's own handler: re-press is deferred)
+		_shop_cancel_button = weakref(n)
 	if n is TrinketSelectUI and not (broadcast != null and broadcast.is_ancestor_of(n)):
 		_gift_uis.append(weakref(n))                 # my own gift boxes (not the spectator copy)
 	var s = n.get_script()
@@ -916,7 +970,80 @@ func _inject_menu(ts: Node) -> void:
 	box.add_child(b)
 	box.move_child(b, ref.get_index() + 1)
 	menu_button = b
+	_purge_stale_active()
 	_cleanup_leftover_lobby_run()
+	if menu_notice != "":
+		var n := menu_notice
+		menu_notice = ""
+		open_lobby_from_menu.call_deferred()
+		_status.call_deferred(n, true)
+	elif _open_panel_on_title:
+		_open_panel_on_title = false
+		open_lobby_from_menu.call_deferred()             # Back to room: straight into the room's lobby
+		_status.call_deferred("Back in room %s: press Ready when you want to play again." % (transport.code if transport != null else ""))
+	elif can_auto_rejoin():
+		_auto_rejoin_title.call_deferred()
+
+
+## Live 2026-10-07: after a crash / game kill the relaunched game showed only the vanilla menu (Continue
+## then resumed the lobby run solo). A match this player can still rejoin (same SteamID, its seat token
+## saved, not left on purpose) is rejoined from the title, once per game start - SILENTLY: no panel, no
+## popup until the room really takes the seat back (then the restored run goes straight to its shop).
+## A dead record (room gone, refused, match over, room back in its lobby) is dropped in the background.
+func can_auto_rejoin() -> bool:
+	return not _auto_rejoin_done and transport != null and transport.code == "" and not active_match().is_empty() \
+		and (client == null or not client.in_match())
+
+
+func _auto_rejoin_title() -> void:
+	if not can_auto_rejoin():
+		return
+	_auto_rejoin_done = true
+	auto_rejoins += 1
+	silent_rejoin = true
+	print("BatoMulti: rejoinable match found at the title (room %s): rejoining in the background" % active_match().code)
+	rejoin_saved_match()
+
+
+## A rejoin record that can never be used (older than ACTIVE_MAX_AGE, another SteamID, broken) is erased at
+## the title without a word; the leftover lobby run it kept goes with it (_cleanup_leftover_lobby_run).
+func _purge_stale_active() -> void:
+	if transport == null or int(transport.self_id) == 0 or not cfg.has_section_key("match", "active"):
+		return
+	var a = cfg.get_value("match", "active", {})
+	if a is Dictionary and not active_match().is_empty() and str(a.get("code", "")) != "" and str(a.get("token", "")) != "":
+		return
+	stale_purged += 1
+	print("BatoMulti: dropped a stale rejoin record (room %s)" % (str(a.get("code", "?")) if a is Dictionary else "?"))
+	_clear_active()
+
+
+## The background rejoin's other dead ends: the room took me in as a plain lobby member (the match is over,
+## the room went Back to room - a lobby seat gets no sync), or nobody answered within SILENT_REJOIN_WAIT.
+func _watch_silent_rejoin(now: float) -> void:
+	if not silent_rejoin:
+		return
+	if _silent_since <= 0.0:
+		_silent_since = now
+	if client.phase == "lobby":
+		_silent_rejoin_failed("the room is back in its lobby")
+	elif now - _silent_since > SILENT_REJOIN_WAIT:
+		_silent_rejoin_failed("no answer in %d s" % int(SILENT_REJOIN_WAIT))
+	if not silent_rejoin:
+		_silent_since = 0.0
+
+
+## The background rejoin found nothing to go back to: forget the record + its kept run, no UI.
+func _silent_rejoin_failed(why: String) -> void:
+	silent_rejoin = false
+	silent_rejoin_failures += 1
+	print("BatoMulti: background rejoin gave up (%s): the record is dropped" % why)
+	_clear_active()
+	if transport != null and transport.code != "":
+		session.leave()
+	client.reset()
+	_cleanup_leftover_lobby_run()
+	_refresh()
 
 
 func on_title_screen() -> bool:
@@ -969,6 +1096,11 @@ func _is_lobby_run_id(id: String) -> bool:
 	return id in cfg.get_value("runs", "lobby_run_ids", [])
 
 
+## RunManager layer: a lobby run is hidden from the title's Continue (run_manager_multi.peek_best_save).
+func is_lobby_run_id(id: String) -> bool:
+	return id != "" and _is_lobby_run_id(id)
+
+
 ## A lobby run left behind (game closed mid-match) must never be continued as a normal run: it
 ## would end in the run summary, which writes profile stats. Lobby runs only save locally.
 ## Exception: the run of a match that can still be rejoined (kept until that match is over).
@@ -989,7 +1121,13 @@ func _cleanup_leftover_lobby_run() -> void:
 func _on_welcomed(token: String) -> void:
 	if transport == null:
 		return
-	var a := {"code": transport.code, "token": token, "id": transport.self_id, "run_id": _lobby_run_id,
+	# a rejoin after a relaunch: no lobby run loaded yet - keep the record's run (the local save restore_lobby_run
+	# needs; it used to be overwritten with "" by this WELCOME, so the run came back only from the host's copy)
+	var prev: Dictionary = cfg.get_value("match", "active", {})
+	var rid := _lobby_run_id
+	if rid == "" and str(prev.get("code", "")) == str(transport.code) and int(prev.get("id", 0)) == transport.self_id:
+		rid = str(prev.get("run_id", ""))
+	var a := {"code": transport.code, "token": token, "id": transport.self_id, "run_id": rid,
 		"at": int(Time.get_unix_time_from_system())}
 	cfg.set_value("match", "active", a)
 	cfg.save(CFG_PATH)
@@ -1064,21 +1202,65 @@ func _try_rejoin(now: float) -> void:
 func create_room(settings: Dictionary, fixed_code := "") -> void:
 	if not integrity_ok() or transport == null or save_blocked != "":
 		return
+	silent_rejoin = false                              # the player's own room wins over a background rejoin
 	_pending_settings = settings
 	client.token = ""
+	client.password = ""                               # the host never proves its own password
 	_clear_active()                                    # a new room gives the old match up
 	var code := RoomCode.normalize(fixed_code if fixed_code != "" else str(dev_arg("room", RoomCode.generate())))
 	if code == "":
 		_status(RoomCode.BAD, true)
 		return
-	transport.create_room(code, int(settings.get("max_players", 8)))
+	transport.create_room(code, LobbyState.member_limit(settings))
 
 
-func join_room(code: String) -> void:
+func join_room(code: String, password := "") -> void:
+	silent_rejoin = false
 	if integrity_ok() and transport != null and save_blocked == "":
 		client.token = ""
+		client.password = password
 		_clear_active()
 		transport.join_room(code)
+
+
+## Lobby browser (0.6.7): join a listed room (`id` = its row id); a locked room needs its password.
+func join_room_id(id, password := "") -> void:
+	if integrity_ok() and transport != null and save_blocked == "" and transport.code == "":
+		client.token = ""
+		client.password = password
+		_clear_active()
+		_status("Joining...")
+		transport.join_room_id(id)
+
+
+func list_rooms(filters: Dictionary) -> void:
+	if transport != null:
+		var f := filters.duplicate()
+		f["version"] = VERSION
+		transport.list_rooms(f)
+
+
+## Host only: `id` is out of the room for good (lobby or match).
+func kick(id: int) -> bool:
+	if host == null or not host.kick(id):
+		return false
+	_status("%s was kicked from the room." % _seat_name(id))
+	_refresh()
+	return true
+
+
+## The host kicked me: out of the room, the lobby run ends, nothing to rejoin.
+func _on_kicked(why: String) -> void:
+	kicked_count += 1
+	_rejoin_until = 0.0
+	_clear_active()
+	if lobby_run_live() or (broadcast != null and broadcast.active) or spectate_scene != null:   # in a match: back to the title
+		menu_notice = why
+		return_to_menu()
+	elif transport != null and transport.code != "":
+		transport.leave_room()
+	_status(why, true)
+	_refresh()
 
 
 func leave_room() -> void:
@@ -1090,9 +1272,67 @@ func leave_room() -> void:
 	_refresh()
 
 
-func start_match() -> void:
-	if host != null and host.start_match():
-		_status("Match started.")
+## Host Start (protocol 8 Ready check): only when every player seat pressed Ready, unless the host
+## confirmed "Start anyway?" (force; lobby panel two-step). False = not started.
+func start_match(force := false) -> bool:
+	if host == null:
+		return false
+	var waiting := not_ready_names()
+	if not waiting.is_empty() and not force:
+		_status("Waiting for %s to press Ready." % ", ".join(waiting), true)
+		return false
+	if host.start_match():
+		_status("Match started." if waiting.is_empty() else "Match started without waiting for %s." % ", ".join(waiting))
+		return true
+	return false
+
+
+## The player seats the host's Start waits for (names).
+func not_ready_names() -> Array:
+	if client == null or transport == null:
+		return []
+	var st = host.state if host != null else client.state
+	return st.not_ready(transport.host_id()).map(func(id): return str(st.seats[id].name))
+
+
+## Lobby Ready / Not Ready toggle (non-host players).
+func set_lobby_ready(on: bool) -> void:
+	if client != null and client.phase == "lobby":
+		client.set_lobby_ready(on)
+
+
+func lobby_ready() -> bool:
+	return client != null and bool(client.my_seat().get("ready", false))
+
+
+## Results screen "Back to room" (protocol 8): the lobby run ends like Return to main menu, but this
+## player stays in the room: the host seats it in the room's next lobby (Not Ready). The others are not
+## waited for: everyone leaves the results on their own. The room gone -> plain Return to main menu.
+func back_to_room() -> void:
+	if transport == null or transport.code == "" or client == null or client.phase != "over":
+		return_to_menu()
+		return
+	back_to_room_count += 1
+	hub_actions.append(["back", 0, Time.get_ticks_msec()])
+	_end_early_spectate()
+	if broadcast != null and broadcast.active:
+		broadcast.stop()
+	_clear_active()
+	_end_lobby_run()
+	stop_watching()
+	spectator.visible = false
+	results.visible = false
+	client.back_to_room()
+	_open_panel_on_title = true
+	var st = _game_state()
+	if st != null and st != title_state and st.has_method("request_transition"):
+		st.request_transition("title")
+	elif on_title_screen():
+		_open_panel_on_title = false
+		open_lobby_from_menu()
+	_status("Back in room %s: press Ready when you want to play again." % transport.code)
+	lobby_run_ended.emit()
+	_refresh()
 
 
 ## Lobby sidebar: Player <-> Spectator for seat `id` (own seat; the host may switch anyone).
@@ -1111,6 +1351,9 @@ func dedicated_spectator() -> bool:
 
 
 func _on_room_failed(why: String) -> void:
+	if silent_rejoin:
+		_silent_rejoin_failed(why)
+		return
 	_status(why, true)
 	if _rejoin_until <= 0.0 and client.token != "" and transport.code == "" and why.begins_with("No room"):
 		_clear_active()                                # the room is gone: nothing to rejoin
@@ -1147,11 +1390,16 @@ func _on_host_changed(old_id: int, new_id: int) -> void:
 
 
 func _on_rejected(why: String) -> void:
+	if silent_rejoin:
+		_silent_rejoin_failed("rejected: " + why)
+		return
 	_status("Rejected: " + why, true)
 	if why.contains("token") or why.contains("already started"):
 		_clear_active()
 	if transport != null:
 		transport.leave_room()
+	if panel != null and panel.has_method("on_join_rejected"):
+		panel.on_join_rejected(why, client.last_reject)     # a password prompt stays open with the reason
 
 
 func _on_received(from: int, bytes: PackedByteArray) -> void:
@@ -1179,9 +1427,18 @@ func _on_match_started(_seed: int) -> void:
 ## sync_full_state arrived. After a crash the game sits on the main menu without the lobby run:
 ## restore it (local save of that run, else the snapshot's copy) and go back to the shop.
 func _on_synced(snap: Dictionary) -> void:
+	if silent_rejoin:
+		if client.phase == "over" or not client.in_match():
+			_silent_rejoin_failed("the room is no longer running that match (%s)" % client.phase)
+			return
+		silent_rejoin = false                         # the seat is back: from here on, the normal UI
+		print("BatoMulti: background rejoin: back in room %s" % (transport.code if transport != null else ""))
+		if client.is_spectating():
+			open_lobby_from_menu()                    # out of lives meanwhile: show where the match is
 	if client.is_spectating() or lobby_run_live() or not client.in_match() or not on_title_screen():
 		return
 	if not restore_lobby_run(snap):
+		open_lobby_from_menu()
 		_status("Back in the match, but your run could not be restored: you play on as a spectator.", true)
 		return
 	close_lobby()
@@ -1270,26 +1527,40 @@ func lobby_run_started(run) -> void:
 ## this player was away comes back from the snapshot (fight_for).
 func opponent_for_round(run):
 	var t0 := Time.get_ticks_msec()
-	var opp = await _opponent_for_round(run)
+	var gen := _search_gen
+	_searching = true
+	var opp = await _opponent_for_round(run, gen)
+	if gen == _search_gen:
+		_searching = false
 	max_search_wait = maxf(max_search_wait, (Time.get_ticks_msec() - t0) / 1000.0)
-	if opp == null and not is_out() and blocker_state() != "over":
+	if opp == null and gen == _search_gen and not is_out() and blocker_state() != "over":
 		null_opponents += 1
 	return opp
 
 
-func _opponent_for_round(run):
+func _opponent_for_round(run, gen := -1):
 	var r := int(run.current_round)
 	var f: Dictionary = {}
 	while true:
+		if gen >= 0 and gen != _search_gen:
+			return null                              # the player pressed Cancel: the shop is theirs again
 		if is_out():
 			_status("You are out of lives: no more fights in this match.", true)
 			return null                              # out for good (second chance used): never a fight
 		f = client.fight_for(r)
-		if not f.is_empty():
+		if not f.is_empty() and not f.get("board", {}).is_empty():
 			break
 		if client.round_n > r and client.phase in ["wait_open", "shop", "ready_wait", "results"]:
 			r = client.round_n                       # the room moved on while we were away
 			run.current_round = r
+			continue
+		if not f.is_empty():
+			# no opponent board this round (the others left / forfeited): never hand the shop a null to retry
+			# forever (live 2026-10-07: "No fight this round" spam); wait for the room - game over or next round
+			if client.phase == "over" or blocker_state() == "over":
+				return null
+			_status("No fight this round: no opponent board. Waiting for the room...", true)
+			await client.changed
 			continue
 		match client.phase:
 			"shop":
@@ -1359,6 +1630,19 @@ func return_to_menu() -> void:
 		if session != null:
 			session.host = null
 	_clear_active()
+	_end_lobby_run()
+	var st = _game_state()
+	if st != null and st != title_state and st.has_method("request_transition"):
+		st.request_transition("title")
+	close_lobby()
+	stop_watching()
+	spectator.visible = false
+	results.visible = false
+	lobby_run_ended.emit()
+
+
+## The lobby run is over for this player: its save concluded / cleared (never continued as a normal run).
+func _end_lobby_run() -> void:
 	var rm = get_node_or_null("/root/RunManager")
 	if lobby_run_live():
 		rm.conclude_run_save()
@@ -1372,14 +1656,6 @@ func return_to_menu() -> void:
 	_lobby_run_id = ""
 	_stash = {}
 	_pending_fight = {}
-	var st = _game_state()
-	if st != null and st != title_state and st.has_method("request_transition"):
-		st.request_transition("title")
-	close_lobby()
-	stop_watching()
-	spectator.visible = false
-	results.visible = false
-	lobby_run_ended.emit()
 
 
 # ------------------------------------------------------------ game glue
@@ -1388,6 +1664,7 @@ func _process(_delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	if session != null:
 		session.tick(now)
+	_cancel_button_tick()
 	if board_ui != null and board_ui.client != null:
 		board_ui.visible = board_ui.client.in_match() or board_ui.client.phase == "over"
 		var fold: bool = spectate_scene != null           # a watched battle: header only, the HP bars stay clear
@@ -1431,12 +1708,15 @@ func _process(_delta: float) -> void:
 	if _skip_intro:
 		_pass_title_intro()
 	_try_rejoin(now)
+	_watch_silent_rejoin(now)
 	_watch_shop()
 	_mirror_shop(now)
 	_update_blocker()
 	if blocker_mode == "eliminated" and my_battle_playing() and not _my_battle_seen():
 		spoiler_frames += 1                            # (a replay of an already finished battle is not a spoiler)
 	_keep_comeback()
+	_report_early()
+	_comeback_tick()
 
 
 ## Test environment only (--bm-skip-intro): the title waits for any key / click before it shows
@@ -1481,6 +1761,121 @@ func _keep_comeback() -> void:
 	var rm = get_node_or_null("/root/RunManager")
 	if str(rm.data.pending_event_id) == Comeback.ID and GameDatabase.get_event_by_id(Comeback.ID) == null:
 		Comeback.ensure(rm.data)
+
+
+## My battle is over on my screen and the game moved on to a post-battle screen (the comeback event, a
+## gift pick): the room gets my result now, not when my next shop opens - the battle barrier never waits
+## for a player who is still choosing (protocol 8; the shop sends it otherwise, _watch_shop).
+func _report_early(path := "") -> void:
+	if _local_result == -2 or client == null or not client.in_match() or not lobby_run_live():
+		return
+	if path == "":
+		path = _state_path()
+	if path != EVENT_STATE and path != TRINKET_SELECT_STATE:
+		return
+	if client.fight_for(_result_round).is_empty() or bool(client.fight_for(_result_round).get("reported", false)):
+		return
+	client.report_round(_result_round, _local_result)
+	_local_result = -2
+	early_reports += 1
+
+
+func _state_path() -> String:
+	var st = _game_state()
+	return str(st.get_script().resource_path) if st != null and st.get_script() != null else ""
+
+
+func _comeback_seconds() -> float:
+	return comeback_pick_seconds if comeback_pick_seconds > 0.0 else MatchHost.COMEBACK_PICK_SECONDS
+
+
+## The comeback (Second Chance) screen of a lobby run: a visible countdown; at 0 the game's own choice
+## flow takes Scaled Gold (an open target picker is closed first). A pick the player already made wins.
+func _comeback_tick() -> void:
+	comeback_step(comeback_test_state if comeback_test_state != null and is_instance_valid(comeback_test_state) else _game_state())
+
+
+## One frame of the comeback countdown for the game state `st` (the harness passes the real event scene).
+func comeback_step(st) -> void:
+	var path: String = str(st.get_script().resource_path) if st != null and st.get_script() != null else ""
+	var on: bool = lobby_run_live() and client != null and client.in_match() and path == EVENT_STATE \
+		and st.get("current_event_data") != null and str(st.current_event_data.id) == Comeback.ID
+	if not on:
+		_comeback_since = -1.0
+		_comeback_screen = null
+		if comeback_timer != null:
+			comeback_timer.visible = false
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	if _comeback_screen == null or _comeback_screen.get_ref() != st:
+		_comeback_screen = weakref(st)
+		_comeback_since = now
+	var picked := _comeback_chosen(st)
+	var left := _comeback_seconds() - (now - _comeback_since)
+	comeback_timer.visible = not picked
+	comeback_timer.text = "Choose your comeback: %d:%02d  (no pick = Scaled Gold)" % [int(ceilf(maxf(left, 0.0))) / 60, int(ceilf(maxf(left, 0.0))) % 60]
+	if left > 0.0 or picked:
+		return
+	var gold := -1
+	var opts: Array = st.current_event_data.options
+	for i in opts.size():
+		if str(opts[i].get("kind")) == "gold":
+			gold = i
+	if gold < 0:
+		gold = opts.size() - 1
+	if gold < 0 or st.get("choice_container") == null or st.choice_container.get_child_count() < opts.size() \
+			or not st.choice_container.get_children().any(func(c): return c is Control and c.mouse_filter == Control.MOUSE_FILTER_STOP):
+		return                                         # the choices are not on screen / clickable yet
+	if int(st.get("pending_option_index")) != -1 and st.has_method("_on_cancel_monster_pressed"):
+		st._on_cancel_monster_pressed()                # the Element Infusion target picker was open
+	comeback_auto_picks += 1
+	comeback_timer.visible = false
+	print("BatoMulti: comeback not picked in %d s: Scaled Gold taken for the player" % int(_comeback_seconds()))
+	_status("Time is up: Scaled Gold was taken for you.")
+	st._resolve_choice(gold)
+
+
+## The player already chose on this event screen (the game plays the chosen card's animation).
+static func _comeback_chosen(st) -> bool:
+	var cc = st.get("choice_container")
+	if cc == null:
+		return false
+	for c in cc.get_children():
+		var ap = c.get("anim_player")
+		if ap != null and str(ap.assigned_animation) in ["pressed", "hide"]:
+			return true
+	return false
+
+
+## Out for good in this match (protocol 8: no more post-battle events / gift picks): my run's last life is
+## gone, the room says I am not alive, or the match is over (the game over screen comes next, for the
+## winner too). Unlike is_out() this ignores outcome_hidden (data only, nothing on screen).
+func out_for_good(run) -> bool:
+	if client == null:
+		return false
+	if client.phase == "over" and lobby_run_live():
+		return true
+	if not client.in_match():
+		return false
+	var seat: Dictionary = client.my_seat()
+	if not seat.is_empty() and str(seat.get("status", "alive")) != "alive":
+		return true
+	return run != null and int(run.lives) <= 0
+
+
+## RunManager layer / battle_state_multi: an eliminated player's run drops its pending event, queued
+## event and gift pick, so the defeat goes straight to the elimination hub. True when something was dropped.
+func suppress_post_battle(run) -> bool:
+	if run == null or not out_for_good(run):
+		return false
+	var had: bool = str(run.pending_event_id) != "" or str(run.queued_event_id) != "" or not run.pending_reward.is_empty()
+	run.pending_event_id = ""
+	run.queued_event_id = ""
+	run.pending_reward = {}
+	if had:
+		events_suppressed += 1
+		print("BatoMulti: out of the match: post-battle event / gift pick skipped")
+	return had
 
 
 ## Leaderboard row: a spectator watches that player; an alive player scouts that player's last
@@ -1587,11 +1982,11 @@ func _make_blocker() -> Control:
 	_blocker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocker_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_blocker_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_blocker_label.add_theme_font_override("font", font)
-	_blocker_label.add_theme_font_size_override("font_size", 16)
-	_blocker_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
-	_blocker_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_blocker_label.add_theme_constant_override("outline_size", 4)
+	_blocker_label.add_theme_font_override("font", UiTheme.font_title())   # the game's title text style
+	_blocker_label.add_theme_font_size_override("font_size", UiTheme.TITLE_SIZE)
+	_blocker_label.add_theme_color_override("font_color", UiTheme.YELLOW)
+	_blocker_label.add_theme_color_override("font_outline_color", UiTheme.DARK)
+	_blocker_label.add_theme_constant_override("outline_size", 6)
 	_blocker_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(_blocker_label)
 	c.visible = false
@@ -1668,6 +2063,46 @@ func _game_state():
 	return scene.get("current_state") if scene != null else null
 
 
+## The game's own Cancel on the "searching for opponent" popup (shop_ui cancel_requested; shop_state
+## has already put the shop back): take the ready back in the room. Too late (the round started / the
+## timer ran out): straight back into the battle with the locked board.
+func _on_shop_cancel() -> void:
+	if client == null or not client.in_match() or not lobby_run_live():
+		return
+	_search_gen += 1
+	_searching = false
+	if client.unready():
+		unready_count += 1
+		_status("Cancelled: change your board, then press Battle! again.")
+		return
+	if client.phase in ["ready_wait", "battle"]:
+		cancel_late += 1
+		_status("Too late to cancel: your board is locked in.", true)
+		_press_battle.call_deferred()
+
+
+func _press_battle() -> void:
+	var st = _game_state()
+	if st != null and st.has_method("_on_battle_requested") and _in_shop() and not _searching and lobby_run_live():
+		st._on_battle_requested()
+
+
+## The room started the round while my shop was open again (a Cancel that lost the race): go fight.
+func _on_round_started(r: int) -> void:
+	if lobby_run_live() and client.phase == "battle" and int(client.fight.get("round", -1)) == r and _in_shop() and not _searching:
+		_press_battle.call_deferred()
+
+
+## The game's Cancel button on the searching popup: hidden once the shop time is over (locked in).
+func _cancel_button_tick() -> void:
+	var ui = _shop_cancel_button.get_ref() if _shop_cancel_button != null else null
+	var cb = ui.get("cancel_button") if ui != null and is_instance_valid(ui) else null
+	if cb == null or not cb.visible or client == null:
+		return
+	if client.phase == "ready_wait" and client.seconds_left() <= 0.5:
+		cb.visible = false
+
+
 func _on_force_ready(_round_n: int) -> void:
 	if is_out():
 		return
@@ -1695,13 +2130,20 @@ func _on_eliminated() -> void:
 
 
 func _on_game_over(winners: Array) -> void:
+	if silent_rejoin:
+		_silent_rejoin_failed("the match is already over")   # never a results popup on a fresh boot
+		return
 	var names: Array = winners.map(func(id): return str(client.state.seats.get(id, {}).get("name", "?")))
 	_status("Game over: %s won. Return to main menu when you are done." % ", ".join(names))
 	_clear_active()
 	panel.visible = true
 
 
+var last_status := ""               # the newest status line (tests: the panel may repaint its hint over it)
+
+
 func _status(s: String, bad := false) -> void:
+	last_status = s
 	print("BatoMulti: ", s)
 	if panel != null and panel.has_method("set_status") and panel.get("_status") != null:
 		panel.set_status(s, bad)

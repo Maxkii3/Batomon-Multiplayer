@@ -21,16 +21,18 @@ extends Control
 signal leave_pressed()
 signal watch_pressed()          # (kept for the glue: toggles the live battle replay)
 
-const COL_BAR := Color(0.05, 0.05, 0.09, 0.96)   # opaque: the game's own top strip never bleeds through
-const LEAVE_W := 42.0
-const COL_EDGE := Color(1.0, 0.85, 0.4, 0.9)
-const COL_TEXT := Color(0.96, 0.96, 0.96)
-const COL_DIM := Color(0.70, 0.70, 0.78)
-const COL_ACCENT := Color(1.0, 0.85, 0.4)
-const WIDTH := 240.0
+## Look (0.6.7): the title on the game's yellow header strip (white text, dark shadow), the status line on a
+## white card under it; < > = the game's blue buttons, Leave = red. Both rows opaque: the game's own top strip
+## never bleeds through.
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const LEAVE_W := 46.0
+const COL_TEXT := UiTheme.WHITE
+const COL_DIM := UiTheme.TEXT
+const COL_ACCENT := UiTheme.WHITE
+const WIDTH := 250.0
 const DOCK_X := 38.0            # in the game's top strip, between the trinket bag and the Day / hearts / wins
 const BAR_H := 22.0
-const SUB_H := 12.0
+const SUB_H := 16.0
 
 var client                      # match_client.gd
 var transport
@@ -50,12 +52,14 @@ var auto_watch := true          # the watched player's live battle opens by itse
 func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
 	client = p_client
 	transport = p_transport
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = UiTheme.BODY_SIZE
+	theme = UiTheme.get_theme()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_prev = _button("<", func(): step(-1))
 	_next = _button(">", func(): step(1))
 	_leave = _button("Leave", func(): leave_pressed.emit())
+	_leave.theme_type_variation = "BmDanger"
 	_leave.tooltip_text = "Leave to Main Menu"
 	for b in [_prev, _next, _leave]:
 		add_child(b)
@@ -68,8 +72,6 @@ func _button(text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", font)
-	b.add_theme_font_size_override("font_size", font_size)
 	b.pressed.connect(cb)
 	return b
 
@@ -114,11 +116,11 @@ func refresh() -> void:
 	view = client.spectate_view(client.spectate_target) if client.spectate_target != 0 else {}
 	var vp := get_viewport_rect().size if is_inside_tree() else Vector2(1280, 720)
 	position = Vector2(minf(DOCK_X, maxf(0.0, vp.x - size.x)), 0)
-	_prev.position = Vector2(2, 3)
-	_prev.size = Vector2(20, 16)
-	_next.position = Vector2(WIDTH - 22, 3)
-	_next.size = Vector2(20, 16)
-	_leave.position = Vector2(WIDTH - LEAVE_W - 2, BAR_H + 2)   # second row, right: never under the status pill
+	_prev.position = Vector2(2, 2)
+	_prev.size = Vector2(22, 18)
+	_next.position = Vector2(WIDTH - 24, 2)
+	_next.size = Vector2(22, 18)
+	_leave.position = Vector2(WIDTH - LEAVE_W - 2, BAR_H + 1)   # second row, right: never under the status pill
 	_leave.size = Vector2(LEAVE_W, SUB_H)
 	queue_redraw()
 
@@ -205,14 +207,14 @@ func outcome() -> Dictionary:
 func _draw() -> void:
 	if font == null or not _on():
 		return
-	draw_rect(Rect2(0, 0, size.x, BAR_H), COL_BAR)
-	draw_line(Vector2(0, BAR_H), Vector2(size.x, BAR_H), COL_EDGE, 1.0)
-	_text(Vector2(24, 6), title_text(), COL_ACCENT, size.x - 48, HORIZONTAL_ALIGNMENT_CENTER)
-	# second row: one solid strip under the bar - status on the left (shortened to fit), Leave on the right
-	draw_rect(Rect2(0, BAR_H + 1, size.x, SUB_H + 3), COL_BAR)
+	# second row first (the strip overlaps its top edge): a white card - status left (shortened), Leave right
+	UiTheme.draw_box(self, "BmCard", Rect2(0, BAR_H - 2, size.x, SUB_H + 5))
+	UiTheme.draw_box(self, "BmStrip", Rect2(0, 0, size.x, BAR_H))
+	UiTheme.draw_text(self, font, Vector2(26, 4), title_text(), font_size, COL_ACCENT, size.x - 52, HORIZONTAL_ALIGNMENT_CENTER,
+		UiTheme.BTN_SHADOW)
 	var sub := sub_line()
 	if sub != "":
-		_text(Vector2(4, BAR_H + 2), sub, COL_DIM, size.x - LEAVE_W - 10)
+		UiTheme.draw_text(self, font, Vector2(5, BAR_H + 2), sub, font_size, COL_DIM, size.x - LEAVE_W - 10)
 
 
 ## The status line, shortened with an ellipsis so it always ends before the Leave button.

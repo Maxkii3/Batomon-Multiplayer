@@ -80,13 +80,33 @@ func display_name(id: int) -> String:
 func send(to_id: int, bytes: PackedByteArray) -> void:
 	hub.queue.append([to_id, self_id, bytes])
 
-func create_room(room_code: String, _max_players: int) -> void:
+func create_room(room_code: String, max_members: int) -> void:
 	if hub.rooms.has(room_code) and not hub.rooms[room_code].members.is_empty():
 		room_failed.emit(RoomCode.IN_USE)
 		return
 	code = room_code
+	member_limit = max_members
 	hub.rooms[code] = {"host": self_id, "members": [self_id]}
 	room_ready.emit(code)
+
+func set_room_info(info: Dictionary) -> void:
+	super(info)
+	if hub.rooms.has(code) and is_host():
+		hub.rooms[code]["info"] = info.duplicate()
+
+
+func list_rooms(_filters: Dictionary = {}) -> void:
+	var rows: Array = []
+	for c in hub.rooms:
+		var room: Dictionary = hub.rooms[c]
+		if room.members.is_empty() or not room.has("info"):
+			continue
+		var r: Dictionary = room.info.duplicate()
+		r["id"] = c
+		r["members"] = room.members.size()
+		rows.append(r)
+	rooms_listed.emit.call_deferred(rows)
+
 
 func join_room(room_code: String) -> void:
 	if not hub.rooms.has(room_code):

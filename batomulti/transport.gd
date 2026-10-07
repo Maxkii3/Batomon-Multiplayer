@@ -28,9 +28,13 @@ signal host_changed(old_id: int, new_id: int)
 ## (the seat waits for a rejoin). Needed because a "leave" message can arrive after the member
 ## is already out of the room, and messages from non-members are dropped.
 signal member_left(id: int, on_purpose: bool)
+## Lobby browser (0.6.7): the answer to list_rooms (room_info.gd rows).
+signal rooms_listed(rows: Array)
 
 var self_id := 0
 var code := ""
+var room_info: Dictionary = {}      # host: the public room info last published (room_info.gd)
+var member_limit := 0               # members the room was created for (players + spectators), 0 = not the creator
 
 
 func host_id() -> int:
@@ -76,8 +80,30 @@ func broadcast(bytes: PackedByteArray) -> void:
 		send(id, bytes)
 
 
-func create_room(_room_code: String, _max_players: int) -> void:
+## max_members = players + spectators (LobbyState.member_limit).
+func create_room(_room_code: String, _max_members: int) -> void:
 	pass
+
+
+## Host: publish the public room info (only what changed; never a password).
+func set_room_info(info: Dictionary) -> void:
+	room_info = info.duplicate()
+
+
+## Lobby browser: every BatoMulti room this transport can see -> rooms_listed(rows). filters: in_lobby /
+## playing / other_versions (Steam filters on its side; everything else is client-side, room_info.gd).
+func list_rooms(_filters: Dictionary = {}) -> void:
+	rooms_listed.emit.call_deferred([])
+
+
+## Browser join: `id` = a row's id (a Steam lobby id, or the code on the test transports).
+func join_room_id(id) -> void:
+	join_room(str(id))
+
+
+## The host changed the room size in the lobby (players + spectators, <= 250).
+func set_member_limit(max_members: int) -> void:
+	member_limit = max_members
 
 
 func join_room(_room_code: String) -> void:

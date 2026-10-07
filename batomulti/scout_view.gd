@@ -18,14 +18,16 @@ extends Control
 ## next to the leaderboard: the shop stays usable around it. Close with the X button or by clicking
 ## the same row again. Spectators keep the spectator view instead.
 
+## Look (0.6.7): a white game card with the yellow header strip, light inset tiles, dark text; X = red button.
 const P := preload("res://batomulti/protocol.gd")
-const COL_BG := Color(0.04, 0.04, 0.07, 0.94)
-const COL_HEAD := Color(0.16, 0.30, 0.55, 0.95)
-const COL_TEXT := Color(0.96, 0.96, 0.96)
-const COL_DIM := Color(0.62, 0.62, 0.70)
-const COL_ACCENT := Color(1.0, 0.85, 0.4)
-const COL_TILE := Color(0.14, 0.14, 0.22, 1.0)
-const COL_EMPTY := Color(0.10, 0.10, 0.14, 1.0)
+const UiTheme := preload("res://batomulti/ui_theme.gd")
+const COL_TEXT := UiTheme.DARK
+const COL_DIM := UiTheme.GREY
+const COL_ACCENT := UiTheme.BLUE_DARK
+const COL_LEVEL := UiTheme.RED_DARK
+const COL_TILE := UiTheme.INSET
+const COL_EMPTY := Color(UiTheme.INSET, 0.45)
+const HEAD_H := 18.0
 const SLOTS := 6
 const COLUMNS := 3                # the game's Utils.COLUMNS / ROWS
 const ROWS := 2
@@ -52,20 +54,21 @@ var _close: Button
 func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
 	client = p_client
 	transport = p_transport
-	font = p_font
-	font_size = p_size
+	font = UiTheme.font_body()
+	font_size = 9
+	theme = UiTheme.get_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	size = Vector2(TRINKET_X + 2 * (ICON + 3) + 54.0, GRID_Y + ROWS * (TILE + NAME_H + GAP) + 16.0)
+	size = Vector2(TRINKET_X + 2 * (ICON + 3) + 60.0, GRID_Y + ROWS * (TILE + NAME_H + GAP) + 18.0)
 	_close = Button.new()
 	_close.text = "X"
 	_close.tooltip_text = "Back to your board"
 	_close.focus_mode = Control.FOCUS_NONE
-	_close.add_theme_font_override("font", font)
-	_close.add_theme_font_size_override("font_size", font_size)
+	_close.theme_type_variation = "BmDanger"
 	_close.pressed.connect(close)
-	_close.size = Vector2(16, 14)
-	_close.position = Vector2(size.x - 18, 1)
+	_close.add_theme_font_size_override("font_size", 8)
 	add_child(_close)
+	_close.size = _close.get_combined_minimum_size()           # the game's button can't be smaller
+	_close.position = Vector2(size.x - _close.size.x - 3, 3)
 	visible = false
 
 
@@ -144,10 +147,11 @@ func _draw() -> void:
 	if font == null or client == null or target == 0:
 		return
 	var db = get_node_or_null("/root/GameDatabase")
-	draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
-	draw_rect(Rect2(0, 0, size.x, 16), COL_HEAD)
+	UiTheme.draw_box(self, "BmCard", Rect2(Vector2.ZERO, size))
+	UiTheme.draw_box(self, "BmStrip", Rect2(2, 2, _close.position.x - 6, HEAD_H - 2))
 	var seat: Dictionary = client.state.seats.get(target, {})
-	_text(Vector2(PAD, 2), "SCOUT  %s" % _name(target), COL_TEXT, size.x - 26)
+	UiTheme.draw_text(self, font, Vector2(PAD + 2, 3), "SCOUT  %s" % _name(target), UiTheme.SECTION_SIZE, UiTheme.WHITE, size.x - 36,
+		HORIZONTAL_ALIGNMENT_LEFT, UiTheme.BTN_SHADOW)
 	var stats := "♥%d%s  W%d" % [int(seat.get("lives", 0)), " last life" if bool(seat.get("second_chance", false)) else "", int(seat.get("wins", 0))]
 	if board.is_empty():
 		_text(Vector2(PAD, 19), stats, COL_ACCENT, size.x - PAD * 2)
@@ -171,9 +175,11 @@ func _draw() -> void:
 		var y := r.position.y
 		if not (u is Dictionary) or u.is_empty():
 			draw_rect(r, COL_EMPTY)
+			draw_rect(r, UiTheme.INSET_BORDER, false, 1.0)
 			_text(Vector2(x, y + TILE * 0.5 - 6), "%d" % (i + 1), COL_DIM, TILE, HORIZONTAL_ALIGNMENT_CENTER)
 			continue
 		draw_rect(r, COL_TILE)
+		draw_rect(r, UiTheme.INSET_BORDER, false, 1.0)
 		var sp = db.get_species_by_id(str(u.get("species_id", ""))) if db != null else null
 		var tex = sp.get("texture") if sp != null else null
 		if tex is Texture2D:
@@ -183,7 +189,7 @@ func _draw() -> void:
 			_text(Vector2(x + 1, y), "T%d" % t, COL_DIM, TILE)
 		if bool(u.get("is_shiny", false)):
 			_text(Vector2(x, y), "*", COL_ACCENT, TILE - 2, HORIZONTAL_ALIGNMENT_RIGHT)
-		_text(Vector2(x, y + TILE - 10), "Lv%d" % int(u.get("level", 1)), COL_ACCENT, TILE - 2, HORIZONTAL_ALIGNMENT_RIGHT)
+		_text(Vector2(x, y + TILE - 10), "Lv%d" % int(u.get("level", 1)), COL_LEVEL, TILE - 2, HORIZONTAL_ALIGNMENT_RIGHT)
 		var nm := str(sp.name) if sp != null else str(u.get("species_id", "?"))
 		_text(Vector2(x - 2, y + TILE + 1), nm, COL_TEXT, TILE + 4, HORIZONTAL_ALIGNMENT_CENTER)
 	# trinkets: a column of icons next to the grid (2 per row)

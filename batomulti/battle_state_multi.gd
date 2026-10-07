@@ -407,8 +407,10 @@ func _on_battle_ended(winner_id: int, round_num: int, wins: int, lives: int):
 	if wants_replay:
 		_start_visual_battle(true)
 		return
-	var next_state = RunManager.determine_post_battle_state()
+	var next_state = RunManager.determine_post_battle_state()   # (an eliminated player's events / gifts are dropped there)
 	RunManager.data.notify_post_battle()
+	if b != null and b.has_method("suppress_post_battle") and b.suppress_post_battle(RunManager.data):
+		next_state = "shop"                         # a gift / event added by notify_post_battle: dropped too
 	if not RunManager.data.pending_reward.is_empty():
 		next_state = "trinket_select"
 		_fix_gift_giver(RunManager.data)

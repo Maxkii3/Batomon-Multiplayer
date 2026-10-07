@@ -105,19 +105,39 @@ func on_members_changed() -> void:
 			host.peer_disconnected(int(id))
 
 
-## A member left the room on purpose: final, like its LEAVE message (which may never arrive).
+## A member left the Steam lobby. In the lobby / after the game over that is final (like its LEAVE). In a
+## running match it is only a disconnect (live 2026-10-07: Steam reports a killed / crashed game as "left",
+## which made the seat LEFT and refused the rejoin): the seat waits for the rejoin; a real leave sends its
+## LEAVE message first (match_client.leave), and that one is final at once.
 func on_member_left(id: int, on_purpose: bool) -> void:
-	if on_purpose and host != null and id != t.self_id:
+	if host == null or id == t.self_id:
+		return
+	if host.state.phase in ["starting", "collect", "shop", "battle"]:
+		host.peer_disconnected(id)
+	elif on_purpose:
 		host.handle(id, {"t": P.LEAVE, "b": {}})
 
 
 func on_host_changed(old_id: int, new_id: int) -> void:
 	if client.state.phase == "over":
-		# the match is finished: the host closing its game is not a crash. No successor host, no
-		# rejoin into a dead room (v0.5.3: the post-game "took over" noise after every self-test)
+		# the match is finished: the host closing its game is not a crash. No match takeover, no rejoin
+		# into a dead room (v0.5.3). Protocol 8: the room lives on as a lobby for the members that went
+		# Back to room - the elected member keeps it open (seated itself only when it comes back too).
 		host = null
 		post_over_handoffs += 1
-		log_line.emit("host %d left after game over: no takeover" % old_id)
+		if new_id == t.self_id:
+			host = _new_host()
+			host.now = now
+			host.adopt_guard(client.guard)
+			for id in client.state.seats:
+				host._alumni[int(id)] = str(client.state.seats[id].name)
+			host.reopened = true
+			var keep: Dictionary = client.state.settings.duplicate()
+			keep["password"] = host.password
+			host.open(keep, client.name, false)
+			log_line.emit("host %d left after game over: the room stays open as a lobby here" % old_id)
+		else:
+			log_line.emit("host %d left after game over: no takeover" % old_id)
 		return
 	if new_id == t.self_id:
 		migrations += 1
@@ -127,12 +147,19 @@ func on_host_changed(old_id: int, new_id: int) -> void:
 		if client.snap.is_empty() or client.state.phase == "lobby":
 			host = _new_host()
 			host.now = now
-			host.open(client.state.settings, client.name)
+			host.adopt_guard(client.guard)                # the room password / bans survive the migration
+			for id in client.alumni:                      # a reopened room: the last match's players come back freely
+				host._alumni[int(id)] = str(client.alumni[id])
+			host.reopened = not client.alumni.is_empty()
+			var keep: Dictionary = client.state.settings.duplicate()
+			keep["password"] = host.password
+			host.open(keep, client.name)
 		else:
 			host = MatchHost.from_snapshot(t, client.snap, client.inflight, shop_left, old_id, mod_version, game_version, now)
 			if resolver != null:
 				host.resolver = resolver
 			host.log_line.connect(_relay_log)
+			host.adopt_guard(client.guard)
 			host_took_over.emit(host.epoch)
 		log_line.emit("took over from %d" % old_id)
 	elif host != null:
@@ -152,7 +179,8 @@ func tick(p_now: float) -> void:
 ## Leaving on purpose: a LEAVE (the seat is given up). A host leaving a running match lets the
 ## others elect a successor instead of closing the room.
 func leave() -> void:
-	var migrate: bool = host != null and client.in_match() and host.state.phase != "over"
+	var migrate: bool = host != null and (client.in_match() and host.state.phase != "over"
+		or host.reopened and host.state.phase in ["lobby", "over"])   # a reopened room outlives its host
 	if client.phase != "idle":
 		client.leave()
 	if t != null and t.code != "":
