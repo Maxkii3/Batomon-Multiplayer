@@ -1,3 +1,54 @@
+# BatoMulti 0.6.8-dev — reworked comeback, new room layout (development build)
+
+> **Development build, not a GitHub Release yet.** The in-game updater keeps everyone on v0.6.7 until
+> 0.6.8 is released. 0.6.8-dev rooms only accept 0.6.8-dev players (0.6.7 cannot join them).
+
+## Last Life comeback, reworked
+
+The first time you hit zero lives you come back with 1 life and choose one of four cards. Every card now
+opens a **preview** (gold before → after, every unit's level, the unit's new types, what a Reforge loses)
+with **Back** and **Confirm**; nothing is spent until you confirm. If the choice timer runs out you get
+Rally Supplies.
+
+- 💰 **Rally Supplies** — gold = **1.25 × the next shop's base income**, rounded to the nearest 5 and
+  capped at **130**, plus **3 free rerolls**.
+- ⬆️ **Board Upgrade** — +1 level to every board unit below level 3.
+- 🧪 **Element Infusion** — two elements are offered: one that fits your board, one wildcard. Only
+  **electric, fighting, fire, flying, grass, rock, toxic and water** can roll. A unit never gets an
+  element it already has and keeps its own types.
+- 🎁 **Trinket** — rarity by day: Common (Day 1-2), Rare (3-5), Super Rare (6-10), Legendary (11-16),
+  Mythical (17+).
+- 🔁 **Reforge** — turns one **bench** unit into one of three species of the same rarity at the same level.
+  The three are fixed for that unit (cancelling and coming back shows the same three). Eggs and other
+  event-only units can't be reforged. The preview names what is lost (for example its ability's progress).
+- 🎯 **Tactical Draft** — three new units, one **Defense**, one **Offense** and one **Support**, at the best
+  rarity your next shop can roll (up to Legendary). From **Day 17** the run's **Mythical** units join the
+  pool. With no free slot on your bench or board, you pick a bench unit to sell for its normal value.
+- Cards come in four slots (Rally · Board Upgrade · Infusion or Trinket · Reforge or Draft); a card that
+  can't help you is replaced by another comeback. Offers are stored with your run, so a reconnect or a
+  crash rejoin shows exactly the same cards.
+
+## Look and feel
+
+- 🖼️ **Unit pictures.** Tactical Draft shows three cards with each unit's picture, name and role; Reforge
+  lists its three species with their pictures in a side panel next to the game's unit picker (clear of
+  your team and the picker's buttons).
+- 🧭 **New room layout.** Room / Browse rooms on the left with the room code and **Copy** on the right of
+  the same row; host settings next to the member list; one **bottom action bar**: **Leave room** on the
+  left, who's ready in the middle, and on the right **Start match** (host) with a smaller red **Force
+  Start** right next to it, or **Ready Up!** (players). The Create room / Join row only shows before you
+  are in a room. Long room and player names are shortened with "..." and never push the buttons away.
+
+## Install
+
+- The setup file (`.cmd`) works as before; it is attached to a release once 0.6.8 is published.
+- New: a **manual-install zip** for mod sites (`BatoMulti-v0.6.8-dev-ManualInstall.zip`) with only the
+  `batomulti` scripts, `override.cfg` and a plain-text `README.txt`. Extract it next to
+  `batomon_showdown.exe`. It replaces `override.cfg`, so other autoload mods (such as BatomonDPS) stop
+  loading; see the README for merging and uninstalling.
+
+---
+
 # BatoMulti 0.6.7 — room browser, passwords and big rooms
 
 Batomon Showdown, multiplayer: create a room, share the code (or let people find it in the new room

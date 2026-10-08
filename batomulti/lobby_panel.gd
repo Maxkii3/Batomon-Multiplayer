@@ -399,7 +399,21 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	for c in action_bar.get_children():
 		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	outer.add_child(action_bar)
+	resized.connect(keep_on_screen)
 	refresh()
+
+
+## The panel is centred when it opens, then grows (a filling room, the pre-room rows going away): it slides
+## back inside the screen so the bottom action bar never ends up below the window (showcase 2026-10-08).
+func keep_on_screen() -> void:
+	var vp := get_viewport_rect().size
+	if vp.x <= 0.0 or vp.y <= 0.0:
+		return
+	var p := position
+	p.x = clampf(p.x, 0.0, maxf(0.0, vp.x - size.x))
+	p.y = clampf(p.y, 0.0, maxf(0.0, vp.y - size.y))
+	if p != position:
+		position = p.floor()
 
 
 func settings() -> Dictionary:

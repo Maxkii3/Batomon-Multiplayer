@@ -37,13 +37,17 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
 
 ## 📸 Preview
 
+> The screenshots show the **0.6.8 development build**: the new room layout with its bottom action bar
+> and the reworked Last Life comeback. The current download on the Releases page is **v0.6.7**, which
+> still has the older room layout.
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/01_main_menu.png" alt="Main menu with the Multiplayer button"><br><sub><b>Main menu</b> — BatoMulti adds a <b>Multiplayer</b> button.</sub></td>
     <td width="50%"><img src="docs/screenshots/06_lobby_browser.png" alt="The Browse rooms tab: room name, host, players, spectators, status, speed, code and a lock on password rooms"><br><sub><b>Room browser</b> — find a public room: name, host, players, spectators, status and speed; 🔒 = password.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab with room code, host settings, max players / spectators and the scrollable member list"><br><sub><b>Your room</b> — room code, host settings, room size, and the member list with <b>Player / Spectator</b> and <b>Kick</b>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab: room code and Copy next to the tabs, host settings beside the member list, and the bottom action bar with Leave room, the ready count, Force Start and Start match"><br><sub><b>Your room</b> — room code + <b>Copy</b> up top, host settings beside the member list (<b>Player / Spectator</b>, <b>Kick</b>), and one action bar: <b>Leave room</b> · who's ready · <b>Force Start</b> + <b>Start match</b>.</sub></td>
     <td width="50%"><img src="docs/screenshots/08_shop_overlay.png" alt="The shop with the live leaderboard and the next-opponent bar"><br><sub><b>Shop</b> — the live leaderboard and your <b>next opponent</b> while you build.</sub></td>
   </tr>
   <tr>
@@ -53,6 +57,10 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
   <tr>
     <td width="50%"><img src="docs/screenshots/05_spectator_mode.png" alt="Spectator mode watching a live battle"><br><sub><b>Spectator mode</b> — watch any player's shop and battles live, full screen; switch with &lt; &gt;.</sub></td>
     <td width="50%"><img src="docs/screenshots/07_results.png" alt="The results screen with every player's placement"><br><sub><b>Results</b> — final placements, then back to the menu with one click.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/0.6.8-dev/comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Tactical Draft</b> — on your last life, pick one of three units (Defense / Offense / Support), each with its picture.</sub></td>
+    <td width="50%"><img src="docs/screenshots/0.6.8-dev/comeback_reforge_picker.png" alt="Reforge: the side panel with three species and their pictures next to the game's unit picker"><br><sub><b>Reforge</b> — reshape a bench unit into one of three species, previewed next to your team before you confirm.</sub></td>
   </tr>
 </table>
 
@@ -80,7 +88,9 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
   player can't come back to that room, even if the host changes.
 - **Speed controls** — the host picks 1x, 2x, 4x, 6x or 8x battle speed for everyone.
 - **Ready check** — players press **Ready Up!**; the host starts when everyone is ready, or uses the
-  red **Force Start** to go without waiting.
+  red **Force Start** to go without waiting. In 0.6.8 everything sits in one bottom action bar:
+  **Leave room** on the left, who's ready in the middle, **Force Start** + **Start match** (or
+  **Ready Up!**) on the right.
 - **Cancel after Battle!** — pressed Battle! too early? Press **Cancel** on the "searching" popup to go back to
   your shop while the others are still shopping, then press Battle! again.
 - **Looks like the game** — every BatoMulti screen uses the game's own buttons, cards, fonts and colours.
@@ -91,6 +101,23 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
   - **Trinket** — choose a trinket whose rarity grows with the day: Common (Day 1-2), Rare (3-5),
     Super Rare (6-10), Legendary (11-16), Mythical (17+)
   - **Scaling Gold** — a pile of gold that grows the longer the match goes
+
+  **Reworked in 0.6.8** (development build): every comeback opens a preview first (what you gain, what
+  a change costs) and only **Confirm** takes it. You see four cards:
+  - **Rally Supplies** — 1.25× your next shop's base income in gold (rounded to 5, at most **130**)
+    plus **3 free rerolls**. It is also the auto-pick when the choice timer runs out.
+  - **Board Upgrade** — +1 level to every board unit below level 3.
+  - **Element Infusion** *or* **Trinket** — Infusion offers two elements (one that fits your board, one
+    wildcard) from **fire, water, grass, electric, rock, flying, fighting, toxic**; the unit keeps its
+    own types and never gets one it already has. The Trinket follows the day table above.
+  - **Reforge** *or* **Tactical Draft** — Reforge turns one **bench** unit into one of three species of
+    the same rarity, keeping its level (the three stay the same if you cancel and come back). Tactical
+    Draft offers three new units, one **Defense**, one **Offense** and one **Support**, at the best
+    rarity your next shop can roll; from **Day 17** the run's **Mythical** units join that pool. With no
+    free slot on your bench or board, you pick a bench unit to sell (for its normal sell value) to
+    make room.
+  - Draft and Reforge cards show each unit's **picture**, name and role.
+  A card that can't help you (say, a board already at level 3) is swapped for another comeback.
 - **Know your next opponent** — the shop shows who you fight next (⚔), so you can plan your board against them.
 - **Scout your opponents** — click a name on the leaderboard to peek at their 3×2 board.
 - **Spectator mode** — knocked out? Your screen becomes a live broadcast of a friend's game: their shop, board and every purchase as it happens, their gift boxes as they open them, then their battle. Flip between players with < > or the arrow keys.
@@ -122,6 +149,27 @@ was — details in [How to uninstall](#-how-to-uninstall).
 restarts the game. Coming from 0.6.1 or older? Run the new setup file once by hand. No internet? The
 check stays silent and the game starts as usual. To turn the check off, add `[update]` and
 `check=false` to `%APPDATA%\Godot\app_userdata\Batomon Showdown\batomulti.cfg`.
+
+### Manual install (zip, no setup file)
+
+Where BatoMulti is offered as a manual-install zip (for example `BatoMulti-v0.6.8-dev-ManualInstall.zip`
+for mod sites), the zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
+`override.cfg` and a `README.txt`. There is nothing to run.
+
+1. **Close Batomon Showdown.** In Steam: right-click it → **Manage → Browse local files**.
+2. **Extract the zip into that folder** so `batomulti\` and `override.cfg` sit directly next to
+   `batomon_showdown.exe` (not inside a sub-folder).
+3. **Launch the game through Steam** and look for the **Multiplayer** button on the main menu.
+
+> ⚠️ The zip **replaces** the game folder's `override.cfg`. Any other mod that registers itself there
+> (for example BatomonDPS) stops loading — back up your `override.cfg` first, or merge instead: keep
+> yours and add `RunManager="*res://batomulti/run_manager_multi.gd"` and
+> `BatoMulti="*res://batomulti/batomulti.gd"` under its `[autoload]` section. BatoMulti can't run with
+> another mod that also replaces RunManager. The setup file checks all of this for you; the zip can't.
+
+To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.8-dev only joins
+0.6.8-dev rooms.
 
 ## 🎮 How to play with friends
 
