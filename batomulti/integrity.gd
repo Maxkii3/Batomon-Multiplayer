@@ -15,9 +15,9 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "2195dda42449755ee32e4a9093de11122e35a7b4e57c3ef7dc6924c52d388535"
+const SELF_SHA256 := "5434836773f3b3d613d970b69f6d1219f5948f01f3727ed09bf7533973f8fbdc"
 const MANIFEST := {
-	"batomulti.gd": "c85e517c1b75090400e43949b6f594ec2157a0aad5d372b5b459608939db67fa",
+	"batomulti.gd": "fccef74da0d1680b8ebc588878a25058053a89ef1293fb780d615dca4b24d7ba",
 	"battle_state_multi.gd": "5d4cfef472df94798ce9c80432a81b155d6af4584dd905abfe9f7bc08232ac6d",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",

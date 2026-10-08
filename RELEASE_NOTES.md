@@ -1,7 +1,10 @@
-# BatoMulti 0.6.8-dev — reworked comeback, new room layout (development build)
+# BatoMulti 0.6.8 — reworked comeback, new room layout
 
-> **Development build, not a GitHub Release yet.** The in-game updater keeps everyone on v0.6.7 until
-> 0.6.8 is released. 0.6.8-dev rooms only accept 0.6.8-dev players (0.6.7 cannot join them).
+Batomon Showdown, multiplayer: create a room, share the code (or let people find it in the room browser),
+and battle round after round until one trainer is left.
+
+**Updating from 0.6.2-0.6.7:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.6.8: 0.6.7 and 0.6.8 players can't share a room.
 
 ## Last Life comeback, reworked
 
@@ -41,9 +44,10 @@ Rally Supplies.
 
 ## Install
 
-- The setup file (`.cmd`) works as before; it is attached to a release once 0.6.8 is published.
-- New: a **manual-install zip** for mod sites (`BatoMulti-v0.6.8-dev-ManualInstall.zip`) with only the
-  `batomulti` scripts, `override.cfg` and a plain-text `README.txt`. Extract it next to
+- **`BatoMulti-Setup-0.6.8.cmd`** (recommended): close the game, double-click it, launch the game through
+  Steam. It finds the game, sets other mods aside safely and uninstalls when run again.
+- New: **`BatoMulti-v0.6.8-ManualInstall.zip`** (also for mod sites) with only the `batomulti` scripts,
+  `override.cfg` and a plain-text `README.txt` — nothing to run. Extract it next to
   `batomon_showdown.exe`. It replaces `override.cfg`, so other autoload mods (such as BatomonDPS) stop
   loading; see the README for merging and uninstalling.
 

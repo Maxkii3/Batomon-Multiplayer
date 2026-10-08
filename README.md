@@ -37,10 +37,6 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
 
 ## 📸 Preview
 
-> The screenshots show the **0.6.8 development build**: the new room layout with its bottom action bar
-> and the reworked Last Life comeback. The current download on the Releases page is **v0.6.7**, which
-> still has the older room layout.
-
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/01_main_menu.png" alt="Main menu with the Multiplayer button"><br><sub><b>Main menu</b> — BatoMulti adds a <b>Multiplayer</b> button.</sub></td>
@@ -59,8 +55,8 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
     <td width="50%"><img src="docs/screenshots/07_results.png" alt="The results screen with every player's placement"><br><sub><b>Results</b> — final placements, then back to the menu with one click.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/0.6.8-dev/comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Tactical Draft</b> — on your last life, pick one of three units (Defense / Offense / Support), each with its picture.</sub></td>
-    <td width="50%"><img src="docs/screenshots/0.6.8-dev/comeback_reforge_picker.png" alt="Reforge: the side panel with three species and their pictures next to the game's unit picker"><br><sub><b>Reforge</b> — reshape a bench unit into one of three species, previewed next to your team before you confirm.</sub></td>
+    <td width="50%"><img src="docs/screenshots/0.6.8/comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Tactical Draft</b> — on your last life, pick one of three units (Defense / Offense / Support), each with its picture.</sub></td>
+    <td width="50%"><img src="docs/screenshots/0.6.8/comeback_reforge_picker.png" alt="Reforge: the side panel with three species and their pictures next to the game's unit picker"><br><sub><b>Reforge</b> — reshape a bench unit into one of three species, previewed next to your team before you confirm.</sub></td>
   </tr>
 </table>
 
@@ -102,7 +98,7 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
     Super Rare (6-10), Legendary (11-16), Mythical (17+)
   - **Scaling Gold** — a pile of gold that grows the longer the match goes
 
-  **Reworked in 0.6.8** (development build): every comeback opens a preview first (what you gain, what
+  **Reworked in 0.6.8:** every comeback opens a preview first (what you gain, what
   a change costs) and only **Confirm** takes it. You see four cards:
   - **Rally Supplies** — 1.25× your next shop's base income in gold (rounded to 5, at most **130**)
     plus **3 free rerolls**. It is also the auto-pick when the choice timer runs out.
@@ -133,7 +129,7 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.7.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.8.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -152,8 +148,8 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Where BatoMulti is offered as a manual-install zip (for example `BatoMulti-v0.6.8-dev-ManualInstall.zip`
-for mod sites), the zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
+Prefer a zip? Download **`BatoMulti-v0.6.8-ManualInstall.zip`** from the [Releases](../../releases) page
+(it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
 1. **Close Batomon Showdown.** In Steam: right-click it → **Manage → Browse local files**.
@@ -168,8 +164,9 @@ for mod sites), the zip holds only plain text: the `batomulti` folder (the mod's
 > another mod that also replaces RunManager. The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.8-dev only joins
-0.6.8-dev rooms.
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.8 only joins
+0.6.8 rooms. A manual install does not update itself through the setup; download the new zip (or the
+setup file) when a new version is out.
 
 ## 🎮 How to play with friends
 
@@ -232,12 +229,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.7.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.8.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.7.cmd uninstall
-   BatoMulti-Setup-0.6.7.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.7.cmd status
+   BatoMulti-Setup-0.6.8.cmd uninstall
+   BatoMulti-Setup-0.6.8.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.8.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
