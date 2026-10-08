@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.7"
+const VERSION := "0.6.8-dev"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -49,6 +49,7 @@ const ScoutView := preload("res://batomulti/scout_view.gd")
 const ResultsView := preload("res://batomulti/results_view.gd")
 const Updater := preload("res://batomulti/updater.gd")
 const Comeback := preload("res://batomulti/comeback.gd")
+const ComebackPanel := preload("res://batomulti/comeback_panel.gd")
 const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
 const BattleViewMirror := preload("res://batomulti/battle_view_mirror.gd")
 const EffectDirectorMirror := preload("res://batomulti/effect_director_mirror.gd")
@@ -187,6 +188,10 @@ var _comeback_screen: WeakRef = null
 var comeback_auto_picks := 0        # tests / live report
 var comeback_pick_seconds := -1.0   # tests: shorter countdown (-1 = MatchHost.COMEBACK_PICK_SECONDS)
 var comeback_test_state = null      # tests: the event scene the harness opened (no game state machine there)
+const COMEBACK_GAP := 3.0           # px: the comeback countdown above the dialogue box's bottom edge
+const COMEBACK_CARD_SEP := 7.0      # px: comeback cards to picture / dialogue box (the hover frame reaches 6 px out)
+const COMEBACK_CARD_GAP := 4.0      # px between two comeback cards' art
+var comeback_panel                  # comeback_panel.gd: preview + sub-choice before a comeback card commits (0.6.8)
 var events_suppressed := 0          # post-battle events / gift picks skipped because I am out for good
 var early_reports := 0              # battle results sent from the post-battle event / gift screen
 var back_to_room_count := 0         # tests / live report: Back to room pressed
@@ -291,6 +296,11 @@ func _ready() -> void:
 	comeback_timer.add_theme_constant_override("outline_size", 6)
 	comeback_timer.visible = false
 	layer.add_child(comeback_timer)
+	comeback_panel = ComebackPanel.new()
+	comeback_panel.name = "BatoMultiComebackPanel"
+	comeback_panel.confirmed.connect(_on_comeback_confirm)
+	comeback_panel.backed.connect(func(): comeback_panel.close())
+	layer.add_child(comeback_panel)
 	layer.add_child(results)                            # topmost: the match is over
 	updater = Updater.new()
 	updater.name = "BatoMultiUpdater"
@@ -1789,50 +1799,179 @@ func _comeback_seconds() -> float:
 	return comeback_pick_seconds if comeback_pick_seconds > 0.0 else MatchHost.COMEBACK_PICK_SECONDS
 
 
-## The comeback (Second Chance) screen of a lobby run: a visible countdown; at 0 the game's own choice
-## flow takes Scaled Gold (an open target picker is closed first). A pick the player already made wins.
+## The comeback (Second Chance) screen of a lobby run (0.6.8): the layout fix, the cards rewired to the
+## choice panel (preview, then commit), the side panel during the game's target picker, and a visible
+## countdown; at 0 an open panel / picker is closed and Rally Supplies is taken (exactly once). A pick
+## the player already made wins.
 func _comeback_tick() -> void:
 	comeback_step(comeback_test_state if comeback_test_state != null and is_instance_valid(comeback_test_state) else _game_state())
 
 
-## One frame of the comeback countdown for the game state `st` (the harness passes the real event scene).
+## One frame of the comeback screen for the game state `st` (the harness passes the real event scene).
 func comeback_step(st) -> void:
 	var path: String = str(st.get_script().resource_path) if st != null and st.get_script() != null else ""
-	var on: bool = lobby_run_live() and client != null and client.in_match() and path == EVENT_STATE \
-		and st.get("current_event_data") != null and str(st.current_event_data.id) == Comeback.ID
+	var on: bool = lobby_run_live() and client != null and client.in_match() and path == EVENT_STATE 		and st.get("current_event_data") != null and str(st.current_event_data.id) == Comeback.ID
 	if not on:
 		_comeback_since = -1.0
 		_comeback_screen = null
 		if comeback_timer != null:
 			comeback_timer.visible = false
+		if comeback_panel != null and comeback_panel.visible:
+			comeback_panel.close()
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	if _comeback_screen == null or _comeback_screen.get_ref() != st:
 		_comeback_screen = weakref(st)
 		_comeback_since = now
+		comeback_panel.close()
 	var picked := _comeback_chosen(st)
+	_comeback_layout(st)
+	_hook_comeback_cards(st)
+	if comeback_panel.mode == "side":
+		if int(st.get("pending_option_index")) == -1 or picked:
+			comeback_panel.close()                     # the picker was cancelled / confirmed
+		else:
+			comeback_panel.set_target(st.get("selected_target_monster"))
+	elif comeback_panel.visible and picked:
+		comeback_panel.close()
 	var left := _comeback_seconds() - (now - _comeback_since)
 	comeback_timer.visible = not picked
-	comeback_timer.text = "Choose your comeback: %d:%02d  (no pick = Scaled Gold)" % [int(ceilf(maxf(left, 0.0))) / 60, int(ceilf(maxf(left, 0.0))) % 60]
+	comeback_timer.text = "Choose: %d:%02d  ·  auto-pick: Rally Supplies" % [int(ceilf(maxf(left, 0.0))) / 60, int(ceilf(maxf(left, 0.0))) % 60]
 	if left > 0.0 or picked:
 		return
-	var gold := -1
+	var rally := -1
 	var opts: Array = st.current_event_data.options
 	for i in opts.size():
-		if str(opts[i].get("kind")) == "gold":
-			gold = i
-	if gold < 0:
-		gold = opts.size() - 1
-	if gold < 0 or st.get("choice_container") == null or st.choice_container.get_child_count() < opts.size() \
-			or not st.choice_container.get_children().any(func(c): return c is Control and c.mouse_filter == Control.MOUSE_FILTER_STOP):
+		if str(opts[i].get("kind")) == "rally":
+			rally = i
+	if rally < 0 or not _comeback_cards_live(st):
 		return                                         # the choices are not on screen / clickable yet
+	comeback_panel.close()
 	if int(st.get("pending_option_index")) != -1 and st.has_method("_on_cancel_monster_pressed"):
-		st._on_cancel_monster_pressed()                # the Element Infusion target picker was open
+		st._on_cancel_monster_pressed()                # a target picker was open
+	st.selected_target_monster = null
 	comeback_auto_picks += 1
 	comeback_timer.visible = false
-	print("BatoMulti: comeback not picked in %d s: Scaled Gold taken for the player" % int(_comeback_seconds()))
-	_status("Time is up: Scaled Gold was taken for you.")
-	st._resolve_choice(gold)
+	print("BatoMulti: comeback not picked in %d s: Rally Supplies taken for the player" % int(_comeback_seconds()))
+	_status("Time is up: Rally Supplies was taken for you.")
+	st._resolve_choice(rally)
+
+
+static func _comeback_cards_live(st) -> bool:
+	var cc = st.get("choice_container")
+	return cc != null and cc.get_child_count() >= st.current_event_data.options.size() 		and cc.get_children().any(func(c): return c is Control and c.mouse_filter == Control.MOUSE_FILTER_STOP)
+
+
+## The cards open the choice panel instead of resolving at once (mouse / touch: their `pressed` signal is
+## rewired; controller: a CardKeys child of the screen takes ui_accept first). Once per card.
+func _hook_comeback_cards(st) -> void:
+	var cc = st.get("choice_container")
+	if cc == null:
+		return
+	var kids: Array = cc.get_children()
+	for i in kids.size():
+		var c = kids[i]
+		if not c.has_signal("pressed") or c.has_meta("bm_hooked"):
+			continue
+		for con in c.get_signal_connection_list("pressed"):
+			c.pressed.disconnect(con.callable)
+		c.pressed.connect(_on_comeback_card.bind(i))
+		c.set_meta("bm_hooked", true)
+	if st.get_node_or_null("BmCardKeys") == null:
+		var k = ComebackPanel.CardKeys.new()
+		k.name = "BmCardKeys"
+		k.cards = cc
+		k.on_card = _on_comeback_card
+		st.add_child(k)
+
+
+func _comeback_st():
+	var st = _comeback_screen.get_ref() if _comeback_screen != null else null
+	return st if st != null and is_instance_valid(st) else null
+
+
+## A comeback card was clicked: the panel shows its preview (nothing is committed yet).
+func _on_comeback_card(i: int) -> void:
+	var st = _comeback_st()
+	if st == null or _comeback_chosen(st) or int(st.get("pending_option_index")) != -1 or not _comeback_cards_live(st):
+		return
+	var opts: Array = st.current_event_data.options
+	if i < 0 or i >= opts.size():
+		return
+	comeback_panel.open_confirm(i, opts[i], get_node("/root/RunManager").data)
+
+
+## Confirm on the panel: no unit needed -> the game's own resolve; else the game's own target picker
+## with the panel at its side.
+func _on_comeback_confirm(i: int) -> void:
+	var st = _comeback_st()
+	if st == null or _comeback_chosen(st):
+		comeback_panel.close()
+		return
+	var o = st.current_event_data.options[i]
+	if o.needs_choice():
+		return
+	if o.requires_target():
+		comeback_panel.open_side(i, o, get_node("/root/RunManager").data)
+		comeback_panel.picker_sync = func():
+			var s = _comeback_st()
+			if s != null and int(s.get("pending_option_index")) == i:
+				s.team_overlay.set_can_confirm(o.is_valid_target(s.get("selected_target_monster")))
+		st._start_target_selection(i)
+		return
+	comeback_panel.close()
+	st.selected_target_monster = null
+	st._resolve_choice(i)
+
+
+## The game's event layout fits three choices; four cards ran into the dialogue box (0.6.7 screenshot
+## tests/out/comeback_countdown.png: a card's art, its PanelContainer, hangs 9 px below its 23 px slot).
+## On the comeback screen: the cards are spaced by their real art (a taller art = a taller slot), the last
+## art ends above the dialogue box (room for the hover frame), the scene picture shrinks (top-centre pivot)
+## to end above the cards, the countdown sits inside the dialogue box under the one-line prompt.
+## Recomputed every frame from the original geometry. The card labels stay the game's own one-line
+## AutoShrinkRichTextLabel: wrap + fit_content on them crashed Godot (signal 11, 2026-10-08), so every
+## comeback text is kept short enough for one line (tests: CB14 fits at the label's minimum font size).
+func _comeback_layout(st) -> void:
+	var cc = st.get("choice_container")
+	var db = st.get("dialogue_box")
+	if cc == null or db == null or cc.get_child_count() == 0:
+		return
+	if not cc.has_meta("bm_y0"):
+		cc.set_meta("bm_y0", cc.position.y)
+	var over := 0.0                                      # the card art hangs this far below its slot
+	for card in cc.get_children():
+		var art = card.get_node_or_null("PanelContainer")
+		if not card is Control or art == null:
+			continue
+		var o: float = art.offset_bottom - art.offset_top
+		over = maxf(over, o)
+		var h: float = maxf(1.0, art.get_combined_minimum_size().y - o)
+		if not is_equal_approx(card.custom_minimum_size.y, h):
+			card.custom_minimum_size.y = h
+	cc.add_theme_constant_override("separation", int(over + COMEBACK_CARD_GAP))
+	cc.reset_size()
+	var dr: Rect2 = db.get_global_rect()
+	cc.position.y = float(cc.get_meta("bm_y0"))
+	var cr: Rect2 = cc.get_global_rect()
+	var limit := dr.position.y - COMEBACK_CARD_SEP
+	if cr.end.y + over > limit:
+		cc.position.y -= cr.end.y + over - limit
+		cr = cc.get_global_rect()
+	var ec = st.get_node_or_null("CanvasLayer/EventContainer")
+	if ec != null:
+		ec.pivot_offset = Vector2(ec.size.x / 2.0, 0.0)  # top-centre: the top edge stays put
+		var top: float = ec.get_global_rect().position.y
+		var ph: float = ec.size.y                        # unscaled
+		var sc := 1.0
+		if ph > 0.0 and top + ph > cr.position.y - COMEBACK_CARD_SEP:
+			sc = clampf((cr.position.y - COMEBACK_CARD_SEP - top) / ph, 0.0, 1.0)
+		ec.scale = Vector2(sc, sc)
+		ec.visible = sc >= 0.2                           # a sliver of picture is worse than none
+	comeback_timer.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	comeback_timer.size = Vector2(dr.size.x, 0.0)
+	var th: float = comeback_timer.get_combined_minimum_size().y
+	comeback_timer.position = Vector2(dr.position.x, dr.end.y - th - COMEBACK_GAP * 2.0)
 
 
 ## The player already chose on this event screen (the game plays the chosen card's animation).

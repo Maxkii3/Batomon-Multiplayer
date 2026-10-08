@@ -18,6 +18,8 @@ extends PanelContainer
 ## play: they watch the whole match from round 1.
 ## Look (0.6.7): the game's own menu style via ui_theme.gd - red-framed dialog, yellow header strip, white
 ## cards, the game's textured buttons (yellow = main action, blue = secondary, red = leave the run) and fonts.
+## Layout (0.6.8): header + Close · Room / Browse rooms (left) + room code + Copy (right) · settings | room card ·
+## action bar: Leave room (left), the readiness line (middle), Force Start + Start match / Ready Up! (right).
 
 const RoomCode := preload("res://batomulti/room_code.gd")
 const LobbyState := preload("res://batomulti/lobby_state.gd")
@@ -44,7 +46,9 @@ const READY_OFF := "Ready Up!"
 const READY_ON := "Ready ✓"
 const FORCE_TEXT := "Force Start"
 const FORCE_CONFIRM := "Confirm Force Start?"
-const BIG_BUTTON_H := 40.0          # the Ready / Force Start buttons under the room card
+const BIG_BUTTON_H := 40.0          # the primary action at the bottom right: Ready Up! (members) / Start match (host)
+const FORCE_SCALE := Vector2(0.68, 0.78)   # Force Start next to Start match: ~2/3 its width, ~3/4 its height
+const STATUS_MIN_W := 80.0          # the action bar's readiness line never shrinks below this
 
 var hub                      # batomulti.gd autoload
 var font: Font
@@ -72,7 +76,10 @@ var _join_btn: Button
 var _start_btn: Button
 var ready_btn: Button              # protocol 8: a member's big Ready Up! / Ready ✓ toggle (under the room card)
 var force_btn: Button              # the host's red Force Start (two steps), while players are not ready
-var side_col: VBoxContainer        # the right column: room card + Ready / Force Start
+var side_col: VBoxContainer        # the right column: the room card
+var action_bar: HBoxContainer      # the bottom row: Leave room ... readiness ... Force Start + Start match / Ready
+var code_row: HBoxContainer        # Room code + value (or the code to create with) + Copy, right of the tabs
+var pre_room_row: HBoxContainer    # Create room / code / Join (+ Rejoin match): only outside a room
 var start_armed := false           # Force Start pressed once: "Confirm Force Start?" (START_CONFIRM s)
 var _start_token := 0
 var roster_dots: Dictionary = {}   # seat id -> its StatusDot (tests)
@@ -216,6 +223,10 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_close_btn = _button("Close", func(): hub.close_lobby())
 	head.add_child(_close_btn)
 	outer.add_child(head)
+	# navigation (left) + the room code (right) on one row; a narrow panel wraps the code group below
+	var nav := HFlowContainer.new()
+	nav.add_theme_constant_override("h_separation", 6)
+	nav.add_theme_constant_override("v_separation", 3)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 3)
 	tab_room = _button("Room", func(): show_browser(false))
@@ -223,16 +234,25 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	tab_browse.tooltip_text = "Find a public room to join"
 	tabs.add_child(tab_room)
 	tabs.add_child(tab_browse)
-	outer.add_child(tabs)
+	nav.add_child(tabs)
+	var nav_gap := Control.new()
+	nav_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nav_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nav.add_child(nav_gap)
+	code_row = HBoxContainer.new()
+	code_row.add_theme_constant_override("separation", 4)
+	nav.add_child(code_row)
+	outer.add_child(nav)
 	var root := HBoxContainer.new()
 	root.add_theme_constant_override("separation", 6)
 	outer.add_child(root)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 3)
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.add_child(vb)
 	_vb = vb
 	_build_browser(root)
-	# the right column: the "In this room" card, the big Ready (members) / Force Start (host) right under it
+	# the right column: the "In this room" card, its top level with the settings column
 	side_col = VBoxContainer.new()
 	side_col.add_theme_constant_override("separation", 5)
 	root.add_child(side_col)
@@ -241,11 +261,6 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	side_card.theme_type_variation = "BmCard"
 	side_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side_col.add_child(side_card)
-	ready_btn = _big_button("Ready Up!", func(): press_ready(), "BmPrimary")
-	ready_btn.tooltip_text = "Tell the host you are ready to play"
-	side_col.add_child(ready_btn)
-	force_btn = _big_button("Force Start", func(): press_force(), "BmDanger")
-	side_col.add_child(force_btn)
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 2)
 	side.custom_minimum_size = Vector2(SIDE_W, 0)
@@ -259,8 +274,6 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_roster.add_theme_constant_override("separation", 2)
 	_roster.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	roster_scroll.add_child(_roster)
-	var code_row := HBoxContainer.new()
-	code_row.add_theme_constant_override("separation", 4)
 	_code_label = _label("", "BmSection")
 	code_row.add_child(_code_label)
 	_code_value = _label("", "BmCode")
@@ -280,7 +293,8 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_copy_btn = _button("Copy", func(): copy_code())
 	_copy_btn.tooltip_text = "Copy the room code to the clipboard"
 	code_row.add_child(_copy_btn)
-	vb.add_child(code_row)
+	for c in code_row.get_children():
+		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 	_create_row = HBoxContainer.new()
 	_create_row.add_theme_constant_override("separation", 3)
@@ -340,7 +354,8 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		c.value_changed.connect(func(_v): _on_size_changed())
 	_tie.item_selected.connect(func(_i): _push_settings())
 
-	var btns := HBoxContainer.new()
+	pre_room_row = HBoxContainer.new()
+	var btns := pre_room_row
 	_create_btn = _button("Create room", func(): _create(), "BmPrimary")
 	btns.add_child(_create_btn)
 	btns.add_child(_label("  or code", "BmDim"))
@@ -350,28 +365,40 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	btns.add_child(_join_edit)
 	_join_btn = _button("Join", func(): _join(), "BmPrimary")
 	btns.add_child(_join_btn)
-	vb.add_child(btns)
-	var btns2 := HBoxContainer.new()
-	_start_btn = _button("Start match", func(): press_start(), "BmPrimary")
-	btns2.add_child(_start_btn)
-	_leave_btn = _button("Leave room", func(): hub.leave_room())
-	btns2.add_child(_leave_btn)
-	_menu_btn = _button("Return to main menu", func(): hub.return_to_menu(), "BmDanger")
-	btns2.add_child(_menu_btn)
 	_rejoin_btn = _button("Rejoin match", func(): hub.rejoin_saved_match(), "BmPrimary")
-	btns2.add_child(_rejoin_btn)
-	vb.add_child(btns2)
-	_members = _label("", "BmDim")
-	_members.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_members.custom_minimum_size = Vector2(300, 0)
-	_members.max_lines_visible = 2
-	_members.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_members.mouse_filter = Control.MOUSE_FILTER_PASS
-	vb.add_child(_members)
+	btns.add_child(_rejoin_btn)
+	vb.add_child(btns)
 	_status = _label("", "")
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.custom_minimum_size = Vector2(300, 0)
 	vb.add_child(_status)
+	# the action bar: leaving on the far left, the readiness line in the middle, the primary action far right
+	action_bar = HBoxContainer.new()
+	action_bar.add_theme_constant_override("separation", 6)
+	_leave_btn = _button("Leave room", func(): hub.leave_room())
+	action_bar.add_child(_leave_btn)
+	_menu_btn = _button("Return to main menu", func(): hub.return_to_menu(), "BmDanger")
+	action_bar.add_child(_menu_btn)
+	_members = _label("", "BmDim")
+	_members.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_members.custom_minimum_size = Vector2(STATUS_MIN_W, 0)
+	_members.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_members.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_members.max_lines_visible = 2
+	_members.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_members.mouse_filter = Control.MOUSE_FILTER_PASS
+	action_bar.add_child(_members)
+	force_btn = _button("Force Start", func(): press_force(), "BmDanger")
+	force_btn.custom_minimum_size = Vector2(roundf((SIDE_W + 12.0) * FORCE_SCALE.x), roundf(BIG_BUTTON_H * FORCE_SCALE.y))
+	action_bar.add_child(force_btn)
+	_start_btn = _big_button("Start match", func(): press_start(), "BmPrimary")
+	action_bar.add_child(_start_btn)
+	ready_btn = _big_button("Ready Up!", func(): press_ready(), "BmPrimary")
+	ready_btn.tooltip_text = "Tell the host you are ready to play"
+	action_bar.add_child(ready_btn)
+	for c in action_bar.get_children():
+		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	outer.add_child(action_bar)
 	refresh()
 
 
@@ -496,6 +523,7 @@ func refresh() -> void:
 	_code_value.visible = in_room
 	_room_edit.visible = not in_room
 	_room_edit.editable = can_enter
+	pre_room_row.visible = not in_room
 	_create_btn.disabled = not can_enter
 	_join_btn.disabled = not can_enter
 	_join_edit.editable = can_enter
@@ -507,6 +535,7 @@ func refresh() -> void:
 	ready_btn.text = ready_on_text() if am_ready else READY_OFF
 	ready_btn.theme_type_variation = "BmGo" if am_ready else "BmPrimary"
 	ready_btn.tooltip_text = "You are ready: press to cancel Ready" if am_ready else "Tell the host you are ready to play"
+	_start_btn.visible = not ready_btn.visible              # one primary action: Ready for a member, Start otherwise
 	force_btn.visible = is_host and lobby and hub.client.state.players().size() >= 2 and not hub.not_ready_names().is_empty()
 	_leave_btn.disabled = not in_room
 	_menu_btn.visible = hub.lobby_run_live() or (hub.client != null and hub.client.is_spectating())
@@ -665,7 +694,7 @@ func scroll_to_seat(id: int) -> void:
 
 
 ## Ready check (protocol 8): every player ready -> "Start match" starts. Otherwise the button shows how
-## many are ready and only points at the red Force Start under the room card (operator 2026-10-07).
+## many are ready and only points at the red Force Start left of it (operator 2026-10-07).
 func press_start() -> void:
 	if hub == null:
 		return
@@ -827,6 +856,8 @@ func show_browser(on: bool) -> void:
 	browser.visible = on
 	_vb.visible = not on
 	side_col.visible = not on
+	code_row.visible = not on
+	action_bar.visible = not on
 	if on:
 		if hub != null and hub.transport != null and not hub.transport.rooms_listed.is_connected(_on_rooms_listed):
 			hub.transport.rooms_listed.connect(_on_rooms_listed)
@@ -1148,7 +1179,7 @@ func ready_on_text() -> String:
 	return READY_ON if f == null or f.has_char(0x2713) else "Ready!"
 
 
-## A big call-to-action button (the title font, SIDE_W wide): Ready Up! / Force Start.
+## A big call-to-action button (the title font, SIDE_W wide): Ready Up! / Start match.
 func _big_button(text: String, cb: Callable, variation: String) -> Button:
 	var b := _button(text, cb, variation)
 	b.custom_minimum_size = Vector2(SIDE_W + 12.0, BIG_BUTTON_H)

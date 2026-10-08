@@ -15,18 +15,19 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "9ebb0f8197d33cdd33e9bcea1f7a2b8e4c93d8f5b08050e70e000e33c9b689b0"
+const SELF_SHA256 := "806f5ce8c96b9874b3f98fe74686c0a2b38debba85d2427825edbe163ea3038d"
 const MANIFEST := {
-	"batomulti.gd": "8508b6d309b069c8ef61d1dae667c63d2cb64121c9573becf8867af2d9de944a",
+	"batomulti.gd": "c85e517c1b75090400e43949b6f594ec2157a0aad5d372b5b459608939db67fa",
 	"battle_state_multi.gd": "5d4cfef472df94798ce9c80432a81b155d6af4584dd905abfe9f7bc08232ac6d",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
-	"comeback_option.gd": "d2283b01b5f79de3e3c5c0d61bf61ebe7921cdf824ae2157f02fab8a7c543e90",
-	"comeback.gd": "939951a10f1e7e7bcdb88c35efa795d4d90a1dca1e7abf8be856f5390d09cf4c",
+	"comeback_option.gd": "dd73027fb0316f2956dca3ecd6215be4cbf170a9d5299073d45a57de5073341b",
+	"comeback_panel.gd": "607cd8c27342e9ccd3f5dfdecd6464416916387e62de56a0a173234974ee65ac",
+	"comeback.gd": "f07d47cd2418317b65b7f798dc720bb931f821f0dddf09971eb52be47b331345",
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "97c68c3137b57cd22e0ec45d3c1081c63e4529957c0b7c7f7a8dad2e772fdc2b",
 	"leaderboard.gd": "b11440be6c4da8c9fe795eda558e10352b2b54c738b7dceb49709491300a939e",
-	"lobby_panel.gd": "51595971aa624098ea6901c1d171a69f9854dfe1919eeee3344392686f0ab7f9",
+	"lobby_panel.gd": "ad0cc574b32ab4efd069c009502fd49921d597dfd29d4bc2201648b7bee8b8f2",
 	"lobby_state.gd": "97b181bd0c14ce5682514a4e6bbe0e45bc182c270e24728086002d8908d33bdb",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
 	"match_client.gd": "7df63ea50e2f11b4d5d6acb172fbb1997423df132f9eca4974be59c08172f5f5",
