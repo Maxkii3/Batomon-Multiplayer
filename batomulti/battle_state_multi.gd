@@ -119,7 +119,7 @@ func battle_speed() -> float:
 	var b = _bm()
 	if b == null or b.client == null or not b.client.in_match():
 		return 0.0                                     # no room (tests): the game's own controls
-	return float(b.client.state.settings.get("battle_speed", 1.0))
+	return float(b.client.state.settings.get("battle_speed", 4.0))
 
 
 func _tie_rule() -> String:

@@ -430,7 +430,7 @@ func room_info() -> Dictionary:
 	return {"name": str(state.settings.get("room_name", "")), "code": str(t.code), "locked": password != "",
 		"state": shown, "state_n": RoomInfo.STATE_N[shown], "round": state.round_n, "players": players,
 		"max_p": int(state.settings.max_players), "specs": specs, "max_s": int(state.settings.get("max_spectators", 0)),
-		"speed": float(state.settings.get("battle_speed", 1.0)), "lives": int(state.settings.get("lives", 0)),
+		"speed": float(state.settings.get("battle_speed", 4.0)), "lives": int(state.settings.get("lives", 0)),
 		"shop": int(float(state.settings.get("shop_seconds", 0))),
 		"host_name": str(host_seat.get("name", t.display_name(t.self_id) if t != null else "")),
 		"version": mod_version, "proto": P.VERSION}

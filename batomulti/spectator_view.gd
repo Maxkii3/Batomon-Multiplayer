@@ -184,7 +184,7 @@ func battle_done() -> bool:
 	var o := outcome()
 	if o.is_empty():
 		return false
-	var t: float = client.live_battle_time(int(view.id), int(view.round), float(client.state.settings.get("battle_speed", 1.0)))
+	var t: float = client.live_battle_time(int(view.id), int(view.round), float(client.state.settings.get("battle_speed", 4.0)))
 	return t >= 0.0 and t >= float(o.get("time", INF))
 
 

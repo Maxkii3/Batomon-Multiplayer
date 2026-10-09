@@ -32,7 +32,8 @@ const DEFAULT_SETTINGS := {
 	"max_players": 8,
 	"max_spectators": MAX_SPECTATORS,
 	"set_id": "starter",        # card set every lobby run is started with
-	"battle_speed": 1.0,        # host-set playback speed of every lobby battle (1 / 2 / 4 / 6 / 8), same for all
+	"battle_speed": 4.0,        # host-set playback speed of every lobby battle (1 / 2 / 4 / 6 / 8), same for all
+	"free_trainers": false,     # 0.6.9: true = every player picks any trainer (whole roster), false = the game's 3 offers
 	"second_chance": true,      # the game's Second Chance: the first time at 0 lives -> 1 life + a buff
 }
 

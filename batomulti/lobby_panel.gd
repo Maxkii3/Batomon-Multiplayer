@@ -66,7 +66,9 @@ var _tie: OptionButton
 var max_players_spin: SpinBox      # room size (0.6.7): players 2..250 and spectators, together <= Steam's 250
 var max_specs_spin: SpinBox
 var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); the lit one is the room's speed
-var _speed_i := 0
+var _speed_i := SPEEDS.find(LobbyState.DEFAULT_SETTINGS.battle_speed)   # x4 by default (0.6.9)
+var trainer_buttons: Array = []    # [Random 3, Free pick]: the room's trainer selection mode (0.6.9)
+var _free_trainers: bool = LobbyState.DEFAULT_SETTINGS.free_trainers
 var _code_value: Label             # the code itself, in a room (bright yellow)
 var _copy_btn: Button
 var _copy_token := 0               # the latest Copy click (only its timer resets the label)
@@ -348,6 +350,17 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		speed_row.add_child(b)
 	vb.add_child(speed_row)
 	_style_speeds()
+	var trainer_row := HBoxContainer.new()
+	trainer_row.add_theme_constant_override("separation", 3)
+	trainer_row.add_child(_label("Trainers", ""))
+	for free in [false, true]:
+		var tb := _button("Free pick" if free else "Random 3", func(): _pick_trainers(free))
+		tb.tooltip_text = "Every player picks any trainer from the whole roster (3 per row, scroll down)" if free \
+			else "The game's usual 3 random trainers to choose from"
+		trainer_buttons.append(tb)
+		trainer_row.add_child(tb)
+	vb.add_child(trainer_row)
+	_style_trainers()
 	for c in [_minutes, _lives]:
 		c.value_changed.connect(func(_v): _push_settings())
 	for c in [max_players_spin, max_specs_spin]:
@@ -419,7 +432,7 @@ func keep_on_screen() -> void:
 func settings() -> Dictionary:
 	return {"shop_seconds": _minutes.value * 60.0, "lives": int(_lives.value),
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
-		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)],
+		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers,
 		"max_players": int(max_players_spin.value), "max_spectators": int(max_specs_spin.value),
 		"room_name": RoomInfo.clean_name(name_edit.text), "password": pw_edit.text.strip_edges()}
 
@@ -436,6 +449,17 @@ func _pick_speed(i: int) -> void:
 	_speed_i = i
 	_style_speeds()
 	_push_settings()
+
+
+func _pick_trainers(free: bool) -> void:
+	_free_trainers = free
+	_style_trainers()
+	_push_settings()
+
+
+func _style_trainers() -> void:
+	for i in trainer_buttons.size():
+		trainer_buttons[i].theme_type_variation = "BmToggleOn" if (i == 1) == _free_trainers else "BmToggleOff"
 
 
 ## The room's speed = the game's yellow button (stays lit while locked); the others = blue (grey when locked).
@@ -570,12 +594,17 @@ func refresh() -> void:
 			max_specs_spin.set_value_no_signal(ms)
 	var speed_locked: bool = in_room and not (is_host and lobby)
 	if speed_locked and hub.client != null:
-		var i := SPEEDS.find(float(hub.client.state.settings.get("battle_speed", 1.0)))
+		var i := SPEEDS.find(float(hub.client.state.settings.get("battle_speed", 4.0)))
 		if i >= 0:
 			_speed_i = i                      # guests see the host's choice
 	for b in speed_buttons:
 		b.disabled = speed_locked
 	_style_speeds()
+	if speed_locked and hub.client != null:
+		_free_trainers = bool(hub.client.state.settings.get("free_trainers", false))   # guests see the host's choice
+	for b in trainer_buttons:
+		b.disabled = speed_locked
+	_style_trainers()
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:

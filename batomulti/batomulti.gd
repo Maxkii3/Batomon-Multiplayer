@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.8"
+const VERSION := "0.6.9"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -53,6 +53,8 @@ const ComebackPanel := preload("res://batomulti/comeback_panel.gd")
 const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
 const BattleViewMirror := preload("res://batomulti/battle_view_mirror.gd")
 const EffectDirectorMirror := preload("res://batomulti/effect_director_mirror.gd")
+const TrainerSelectMulti := preload("res://batomulti/trainer_select_multi.gd")
+const TRAINER_SELECT_STATE := "res://game/states/trainer_select_state.gd"
 const SHOP_STATE := "res://game/states/shop_state.gd"
 ## game script -> BatoMulti subclass, swapped in while a lobby fight is pending (plan.md Phase 1)
 const BATTLE_SWAPS := {
@@ -437,8 +439,14 @@ func _ui_script(role: String, out: String) -> void:
 		await get_tree().process_frame
 	ok.call("lobby modal open, no saved run blocking", panel.visible and modal.visible and save_blocked == "")
 	var code := str(dev_arg("room", "TEST42"))
+	var free_mode := str(dev_arg("free-trainers", "")) != ""
 	if role == "host":
 		panel._minutes.value = 1.0
+		ok.call("room default battle speed x4 (lit before Create)", panel.settings().battle_speed == 4.0
+			and panel.speed_buttons[panel.SPEEDS.find(4.0)].theme_type_variation == "BmToggleOn")
+		if free_mode:
+			panel.trainer_buttons[1].pressed.emit()        # the host's Trainers: Free pick
+			ok.call("host pressed Trainers: Free pick", panel.settings().free_trainers == true)
 		panel._create_btn.pressed.emit()
 		t0 = Time.get_ticks_msec()
 		while (host == null or host.state.seats.size() < 2) and Time.get_ticks_msec() - t0 < 60000:
@@ -473,11 +481,11 @@ func _ui_script(role: String, out: String) -> void:
 	t0 = Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 20000:
 		var st = _game_state()
-		if st != null and str(st.get_script().resource_path).ends_with("trainer_select_state.gd"):
+		if st != null and st is TrainerSelectState:      # the game's script or the Free pick subclass
 			break
 		await get_tree().process_frame
 	var st2 = _game_state()
-	ok.call("game moved on to trainer selection", st2 != null and str(st2.get_script().resource_path).ends_with("trainer_select_state.gd"))
+	ok.call("game moved on to trainer selection", st2 != null and st2 is TrainerSelectState)
 	await get_tree().create_timer(1.0).timeout
 	var vr := get_viewport().get_visible_rect()
 	ok.call("leaderboard on screen with both players, inside the window", board_ui.visible and board_ui.rows().size() == 2
@@ -486,6 +494,9 @@ func _ui_script(role: String, out: String) -> void:
 	await get_tree().create_timer(2.0).timeout
 	_shot(out.path_join("ui_%s_run.png" % role))
 	await get_tree().create_timer(0.5).timeout
+	ok.call("room battle speed x4 on this client", float(client.state.settings.get("battle_speed", 0.0)) == 4.0)
+	if free_mode:
+		await _ui_free_pick(role, out, ok)
 	var f := FileAccess.open(out.path_join("ui_%s.txt" % role), FileAccess.WRITE)
 	if f != null:
 		f.store_string("\n".join(lines))
@@ -495,6 +506,63 @@ func _ui_script(role: String, out: String) -> void:
 	return_to_menu()
 	await get_tree().create_timer(1.0).timeout
 	get_tree().quit(0)
+
+
+## UiDuo --bm-free-trainers (0.6.9): on the Free pick screen, scroll the roster with the mouse wheel and
+## pick by pressing a card (host: the first, guest: the last), then the run reaches the shop with it.
+func _ui_free_pick(role: String, out: String, ok: Callable) -> void:
+	var st = _game_state()
+	ok.call("room setting Free pick reached this client", bool(client.state.settings.get("free_trainers", false)))
+	ok.call("Free pick screen swapped in", st != null and st.get_script() == TrainerSelectMulti)
+	if st == null or st.get_script() != TrainerSelectMulti:
+		return
+	var t0 := Time.get_ticks_msec()
+	while not bool(st.get("_cards_ready")) and Time.get_ticks_msec() - t0 < 20000:
+		await get_tree().process_frame
+	await get_tree().create_timer(1.0).timeout
+	var ids: Array = st._trainer_selection.map(func(t): return str(t.id))
+	var sorted_ids := ids.duplicate()
+	sorted_ids.sort()
+	var cards: Array = st.trainer_container.get_children()
+	ok.call("whole roster (%d trainers), sorted by id, 3 per row" % ids.size(), ids.size() > 3 and ids == sorted_ids
+		and cards.size() == ids.size() and st.roster_grid.columns == 3)
+	print("BatoMulti ui-%s: roster %s" % [role, ids])
+	_shot(out.path_join("ui_%s_trainers_top.png" % role))
+	await get_tree().create_timer(0.5).timeout
+	var sc: ScrollContainer = st.roster_scroll
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	ev.position = sc.get_global_rect().get_center()
+	ev.global_position = ev.position
+	ev.factor = 1.0
+	for k in 4:
+		ev.pressed = true
+		get_viewport().push_input(ev.duplicate())
+		var up: InputEventMouseButton = ev.duplicate()
+		up.pressed = false
+		get_viewport().push_input(up)
+		await get_tree().process_frame
+	await get_tree().create_timer(0.6).timeout
+	ok.call("mouse wheel scrolls the roster", sc.scroll_vertical > 0)
+	_shot(out.path_join("ui_%s_trainers_scrolled.png" % role))
+	await get_tree().create_timer(0.5).timeout
+	var pick := 0 if role == "host" else cards.size() - 1
+	sc.ensure_control_visible(cards[pick])
+	await get_tree().create_timer(0.3).timeout
+	cards[pick].button.pressed.emit()
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 20000:
+		var s2 = _game_state()
+		if s2 != null and str(s2.get_script().resource_path) == SHOP_STATE:
+			break
+		await get_tree().process_frame
+	var s3 = _game_state()
+	var rm = get_node_or_null("/root/RunManager")
+	ok.call("picked %s -> shop with that trainer" % ids[pick], s3 != null and str(s3.get_script().resource_path) == SHOP_STATE
+		and str(rm.data.trainer_id) == ids[pick])
+	await get_tree().create_timer(2.0).timeout
+	_shot(out.path_join("ui_%s_shop.png" % role))
+	await get_tree().create_timer(0.5).timeout
 
 
 func _shot(path: String) -> void:
@@ -575,6 +643,9 @@ func _on_node_added(n: Node) -> void:
 	if s != null and not _pending_fight.is_empty() and BATTLE_SWAPS.has(str(s.resource_path)):
 		swap_script(n, {"state": BattleStateMulti, "view": BattleViewMirror, "director": EffectDirectorMirror}[BATTLE_SWAPS[str(s.resource_path)]])
 		return
+	if s != null and str(s.resource_path) == TRAINER_SELECT_STATE and free_trainer_pick():
+		swap_script(n, TrainerSelectMulti)           # the room's Free pick: every trainer, 3 per row, scrolling
+		return
 	if s != null and str(s.resource_path) == TITLE_STATE:
 		title_state = n
 		if n.is_node_ready():
@@ -611,7 +682,7 @@ func watch_battle() -> bool:
 	var canon := Canonical.winner_for(int(o.winner), side0) if not o.is_empty() else -2
 	var id := int(v.id)
 	var r := int(v.round)
-	var speed := float(client.state.settings.get("battle_speed", 1.0))
+	var speed := float(client.state.settings.get("battle_speed", 4.0))
 	_spectate_key = "%d|%d|%d" % [r, int(v.pair[0]), int(v.pair[1])]
 	return watch_boards(b0, b1, r, int(v.pair[2]), side0, canon, [
 		_seat_name(int(v.pair[0])), _seat_name(int(v.pair[1]))], [int(v.pair[0]), int(v.pair[1])],
@@ -693,7 +764,7 @@ func _auto_watch() -> void:
 	if spectate_scene != null and key != "" and key != _spectate_key:
 		stop_watching()                                 # switched to another matchup: follow it
 	if spectate_scene == null and spectator.auto_watch and key != "" and key != _spectate_key and spectator.can_watch() \
-			and client.live_battle_time(int(v.id), int(v.round), float(client.state.settings.get("battle_speed", 1.0))) >= 0.0:
+			and client.live_battle_time(int(v.id), int(v.round), float(client.state.settings.get("battle_speed", 4.0))) >= 0.0:
 		watch_battle()                                  # their battle started on their screen: switch the channel to it
 
 
@@ -1508,6 +1579,11 @@ func match_running() -> bool:
 func lobby_run_live() -> bool:
 	var rm = get_node_or_null("/root/RunManager")
 	return _lobby_run_id != "" and rm != null and rm.data != null and str(rm.data.run_id) == _lobby_run_id
+
+
+## Host setting "free_trainers" (0.6.9): this lobby run picks its trainer from the whole roster.
+func free_trainer_pick() -> bool:
+	return client != null and bool(client.state.settings.get("free_trainers", false)) and lobby_run_live()
 
 
 func wants_lobby_run() -> bool:
