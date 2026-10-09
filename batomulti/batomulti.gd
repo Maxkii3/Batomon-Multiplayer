@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.9"
+const VERSION := "0.6.10"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -406,6 +406,9 @@ func _autoshot(path: String) -> void:
 	while (menu_button == null or not menu_button.is_visible_in_tree()) and Time.get_ticks_msec() - t0 < 60000:
 		await get_tree().process_frame
 	print("BatoMulti dev: main menu button %s after %d ms" % ["found" if menu_button != null else "NOT found", Time.get_ticks_msec() - t0])
+	if title_state != null and is_instance_valid(title_state):
+		print("BatoMulti dev: title script %s, menu buttons visible %d" % [title_state.get_script().resource_path,
+			title_state.get_node(MENU_BOX).get_children().filter(func(c): return c.visible).size()])
 	await get_tree().create_timer(2.0).timeout
 	_shot(path.replace(".png", "_menu.png"))
 	await get_tree().create_timer(0.2).timeout
@@ -646,12 +649,23 @@ func _on_node_added(n: Node) -> void:
 	if s != null and str(s.resource_path) == TRAINER_SELECT_STATE and free_trainer_pick():
 		swap_script(n, TrainerSelectMulti)           # the room's Free pick: every trainer, 3 per row, scrolling
 		return
-	if s != null and str(s.resource_path) == TITLE_STATE:
+	if is_title_script(s):
 		title_state = n
 		if n.is_node_ready():
 			_inject_menu.call_deferred(n)
 		else:
 			n.ready.connect(_inject_menu.bind(n), CONNECT_ONE_SHOT)
+
+
+## The game's title screen script or a subclass of it: Mod Loader 1.2.x (Mods/mod_title_state.gd) swaps
+## its own subclass in on node_added, and when its autoload comes before ours that happens before we see
+## the node - an exact path check then missed the title and the Multiplayer button never appeared.
+static func is_title_script(s) -> bool:
+	while s is Script:
+		if str(s.resource_path) == TITLE_STATE:
+			return true
+		s = s.get_base_script()
+	return false
 
 
 ## Replaces a node's script by a subclass before its _ready (node_added = enter_tree): the values

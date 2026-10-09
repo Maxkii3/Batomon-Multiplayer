@@ -92,6 +92,9 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
   three offers, default) or **Free pick**: every player chooses any trainer from the whole roster. The
   trainers keep the game's own cards, three per row, in a list you scroll with the mouse wheel; they are
   sorted the same way for everyone, so each trainer is always in the same spot.
+- **Works with Mod Loader** *(fixed in 0.6.10)* — the community Mod Loader (`Mods\mod_loader.gd`) and
+  BatoMulti run side by side: the **Multiplayer** button is on the main menu whatever order their lines
+  have in `override.cfg`. The setup keeps Mod Loader's line (and its `Mods` folder) untouched.
 - **Ready check** — players press **Ready Up!**; the host starts when everyone is ready, or uses the
   red **Force Start** to go without waiting. In 0.6.8 everything sits in one bottom action bar:
   **Leave room** on the left, who's ready in the middle, **Force Start** + **Start match** (or
@@ -138,7 +141,7 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.9.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.10.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -157,7 +160,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.6.9-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.6.10-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -170,11 +173,12 @@ Prefer a zip? Download **`BatoMulti-v0.6.9-ManualInstall.zip`** from the [Releas
 > (for example BatomonDPS) stops loading — back up your `override.cfg` first, or merge instead: keep
 > yours and add `RunManager="*res://batomulti/run_manager_multi.gd"` and
 > `BatoMulti="*res://batomulti/batomulti.gd"` under its `[autoload]` section. BatoMulti can't run with
-> another mod that also replaces RunManager. The setup file checks all of this for you; the zip can't.
+> another mod that also replaces RunManager. Mod Loader is fine: keep its `ModLoader=` line, in any order.
+> The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.9 only joins
-0.6.9 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.10 only joins
+0.6.10 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -238,12 +242,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.9.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.10.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.9.cmd uninstall
-   BatoMulti-Setup-0.6.9.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.9.cmd status
+   BatoMulti-Setup-0.6.10.cmd uninstall
+   BatoMulti-Setup-0.6.10.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.10.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
