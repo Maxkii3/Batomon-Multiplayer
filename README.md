@@ -66,6 +66,27 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
 
 ---
 
+## 🛡️ Developer Stance & Safety
+
+Players asked whether using BatoMulti could get them shadowbanned, so we asked the Batomon Showdown
+developer directly. **berrymint** looked at the mod's scope and replied:
+
+> *"This seems fine. It doesn't look like it messes with uploaded teams, and doesn't seem to touch
+> anything that's server-sided, like saves or profiles."*
+
+BatoMulti runs its rooms over Steam between players: it never tampers with uploaded teams,
+server-sided profiles or saves. This is the developer's acknowledgement, not an official endorsement —
+see the unofficial-mod disclaimer below.
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/assets/dev_stance_question.jpg" alt="Discord question to the developer: could you clarify your stance on this multiplayer mod? Players worry about getting shadowbanned"><br><sub><b>The question</b> — asking the developer about the mod and shadowban worries.</sub></td>
+    <td width="50%" valign="top"><img src="docs/assets/dev_stance_answer.jpg" alt="berrymint replies: This seems fine. It doesn't look like it messes with uploaded teams, and doesn't seem to touch anything that's server-sided, like saves or profiles."><br><sub><b>berrymint's reply</b> — it doesn't touch uploaded teams or anything server-sided (saves, profiles).</sub></td>
+  </tr>
+</table>
+
+---
+
 ## ✨ Cool features
 
 - **1-click setup** — one file installs everything. Already using another mod? It's
