@@ -15,9 +15,9 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "6d92137f70f3429f21101a74e563d6a1c529a67137a5e7de4f4d84fa28ec9ef3"
+const SELF_SHA256 := "5247021f212479bc3af2e315286a8e16f964a0cc39eabbf7612d97b493fd796f"
 const MANIFEST := {
-	"batomulti.gd": "f2290594a5f73070776f503941992268b466e609474f5d0f6ec4cff5f83c5830",
+	"batomulti.gd": "9f747d4346f9eda58f48ff6ce29308c7a23d009193fc5c5cd56aa98ad5bd5ff6",
 	"battle_state_multi.gd": "4f335e4990c5cd95a29f78dc59538c5c909227d7c6d28045908ed178a8d25288",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
@@ -27,20 +27,20 @@ const MANIFEST := {
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "97c68c3137b57cd22e0ec45d3c1081c63e4529957c0b7c7f7a8dad2e772fdc2b",
 	"leaderboard.gd": "b11440be6c4da8c9fe795eda558e10352b2b54c738b7dceb49709491300a939e",
-	"lobby_panel.gd": "c57e5b8c4d9e517678a4e67a6b90c7ef37c2e1e323a9f9cc44e7d52d3b96f529",
-	"lobby_state.gd": "939f1c7022a7d32e7d0f2bf5373e0fb5c868ae8b86f31314b8f0ff7abd5edfd7",
+	"lobby_panel.gd": "a85e3602c9b775af42bffbc679d97926ea510b87527e099dff88350322faf186",
+	"lobby_state.gd": "45566ed891fa7522931fd9716e336fe447584ca0247ef9abe88a2b790b8b3dd7",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
 	"match_client.gd": "7df63ea50e2f11b4d5d6acb172fbb1997423df132f9eca4974be59c08172f5f5",
 	"match_host.gd": "41e5184f3c8712be400f3c10e69b17c87c34d56da269beda2023656301463e7e",
 	"match_session.gd": "9503bec01709a04b8e399f9f6f55924217ab08434a9c8873a800ee188837f9d0",
 	"mock_transport.gd": "9bd6b10830cf67d7875ebbc57cca2f86fe1a60793224817a9c537b595d13feb5",
 	"next_match_bar.gd": "2072ca3709b70f536e430b501c0c2abc23fcd3037c6c84d813bb7a2484bf7be8",
-	"pairing.gd": "6337bab262105d4327151ee3d622d5d9f8d79ab96d5e91223b337a2ea2e0a8c6",
+	"pairing.gd": "0e12a4da2e0af222d27b6ba3f7dcb2be25b9dacf4387f22150272cf790c86625",
 	"protocol.gd": "4d19a48377b9374be0cbd6cca2a9b4e24bc4459e3110d63aff812deb5995156d",
 	"results_view.gd": "5e00523531f0d9fdac8b28c3309e8f42847cfc37e44a2642d314e8d97ab8b49d",
 	"room_code.gd": "336921ca9d411e734613472801dd64eeb1a017aeb66702778205be517b0866ac",
 	"room_info.gd": "8aaab056a74b9088a0cdd46fefb7f993fe200957982140b3b913464027fc32d8",
-	"run_manager_multi.gd": "ac377e17e751916b1a5f450c62b0bbbbbab5abb10bc23cb4a88aa3c36e3c0d2a",
+	"run_manager_multi.gd": "2d202ac292e950dda03a554295bcecfc29239348b5c066a16259d2a35b444f18",
 	"scout_view.gd": "0e7c226b5eb50cd8a62ab60a19421f404772de52ab5052f296426ac44aeabb2c",
 	"spectate_broadcast.gd": "f643ec7aeebbcfd364f7525df80bd01cf8c43bbea16529183dd394dad79d9471",
 	"spectator_view.gd": "b703095d80d712e45655cf5f392ad4ad8c9642d5bde1f5a1990da441b703592f",

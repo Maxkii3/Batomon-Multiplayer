@@ -59,6 +59,16 @@ static func pair_seed(lobby_seed: int, round_n: int, a: int, b: int) -> int:
 	return ("bm|%d|%d|%d|%d" % [lobby_seed, round_n, mini(a, b), maxi(a, b)]).hash() & 0x7fffffff
 
 
+## Synchronized events (0.6.11): index of this Day's event in a pool sorted by id. Same lobby seed + Day + pool
+## = the same event on every PC; -1 when the pool is empty.
+static func event_index(pool_size: int, lobby_seed: int, round_n: int) -> int:
+	if pool_size <= 0:
+		return -1
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ("bm|event|%d|%d" % [lobby_seed, round_n]).hash()
+	return rng.randi_range(0, pool_size - 1)
+
+
 static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
 	for i in range(arr.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)

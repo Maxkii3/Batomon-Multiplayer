@@ -69,6 +69,11 @@ var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); th
 var _speed_i := SPEEDS.find(LobbyState.DEFAULT_SETTINGS.battle_speed)   # x4 by default (0.6.9)
 var trainer_buttons: Array = []    # [Random 3, Free pick]: the room's trainer selection mode (0.6.9)
 var _free_trainers: bool = LobbyState.DEFAULT_SETTINGS.free_trainers
+var region_buttons: Array = []     # 0.6.11: [All, then the game's regions (Pantra, Jinto)]; region_ids[i] = its set id
+var region_ids: Array = []
+var _set_id: String = LobbyState.DEFAULT_SETTINGS.set_id
+var event_buttons: Array = []      # 0.6.11: [Same for all, Own luck]: the room's event mode
+var _sync_events: bool = LobbyState.DEFAULT_SETTINGS.sync_events
 var _code_value: Label             # the code itself, in a room (bright yellow)
 var _copy_btn: Button
 var _copy_token := 0               # the latest Copy click (only its timer resets the label)
@@ -361,6 +366,31 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		trainer_row.add_child(tb)
 	vb.add_child(trainer_row)
 	_style_trainers()
+	var region_row := HBoxContainer.new()
+	region_row.add_theme_constant_override("separation", 3)
+	region_row.add_child(_label("Region", ""))
+	region_ids = [""]
+	var region_names := ["All"]
+	for sd in GameDatabase.get_picker_sets():
+		region_ids.append(str(sd.id))
+		region_names.append(sd.name)
+	for i in region_ids.size():
+		var id: String = region_ids[i]
+		var rb := _button(region_names[i], func(): _pick_region(id))
+		rb.tooltip_text = "Units, trainers, trinkets and events from every region" if id == "" \
+			else "Only %s: its units, trainers, trinkets and events" % region_names[i]
+		region_buttons.append(rb)
+		region_row.add_child(rb)
+	_style_regions()
+	region_row.add_child(_label("  Events", ""))                # same row as Region: the panel must fit 640x360 (BU8)
+	for same in [true, false]:
+		var eb := _button("Same for all" if same else "Own luck", func(): _pick_events(same))
+		eb.tooltip_text = "Every player gets the same event on Day 3, 6 and 9, picked by the room" if same \
+			else "Each player's game picks its own events, like a solo run"
+		event_buttons.append(eb)
+		region_row.add_child(eb)
+	vb.add_child(region_row)
+	_style_events()
 	for c in [_minutes, _lives]:
 		c.value_changed.connect(func(_v): _push_settings())
 	for c in [max_players_spin, max_specs_spin]:
@@ -432,7 +462,8 @@ func keep_on_screen() -> void:
 func settings() -> Dictionary:
 	return {"shop_seconds": _minutes.value * 60.0, "lives": int(_lives.value),
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
-		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers,
+		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers, "set_id": _set_id,
+		"sync_events": _sync_events,
 		"max_players": int(max_players_spin.value), "max_spectators": int(max_specs_spin.value),
 		"room_name": RoomInfo.clean_name(name_edit.text), "password": pw_edit.text.strip_edges()}
 
@@ -455,6 +486,28 @@ func _pick_trainers(free: bool) -> void:
 	_free_trainers = free
 	_style_trainers()
 	_push_settings()
+
+
+func _pick_region(id: String) -> void:
+	_set_id = id
+	_style_regions()
+	_push_settings()
+
+
+func _pick_events(same: bool) -> void:
+	_sync_events = same
+	_style_events()
+	_push_settings()
+
+
+func _style_events() -> void:
+	for i in event_buttons.size():
+		event_buttons[i].theme_type_variation = "BmToggleOn" if (i == 0) == _sync_events else "BmToggleOff"
+
+
+func _style_regions() -> void:
+	for i in region_buttons.size():
+		region_buttons[i].theme_type_variation = "BmToggleOn" if region_ids[i] == _set_id else "BmToggleOff"
 
 
 func _style_trainers() -> void:
@@ -605,6 +658,16 @@ func refresh() -> void:
 	for b in trainer_buttons:
 		b.disabled = speed_locked
 	_style_trainers()
+	if speed_locked and hub.client != null:
+		_set_id = str(hub.client.state.settings.get("set_id", ""))     # guests see the host's region
+	for b in region_buttons:
+		b.disabled = speed_locked
+	_style_regions()
+	if speed_locked and hub.client != null:
+		_sync_events = bool(hub.client.state.settings.get("sync_events", true))   # guests see the host's choice
+	for b in event_buttons:
+		b.disabled = speed_locked
+	_style_events()
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:

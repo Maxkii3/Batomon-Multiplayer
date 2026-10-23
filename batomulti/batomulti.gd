@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.10"
+const VERSION := "0.6.11"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -1514,7 +1514,7 @@ func _on_match_started(_seed: int) -> void:
 		return
 	close_lobby()
 	var rm = get_node_or_null("/root/RunManager")
-	rm.start_new_run(false, str(client.state.settings.get("set_id", "starter")))
+	rm.start_new_run(false, str(client.state.settings.get("set_id", "")))
 	if lobby_run_live():
 		title_state.request_transition("trainer_select")
 

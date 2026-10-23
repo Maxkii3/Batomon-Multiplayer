@@ -13,6 +13,7 @@ extends "res://game/run/run_manager.gd"
 ## passes straight through unless a BatoMulti match is running (doc/architecture.md §2, §5.3).
 
 const Comeback := preload("res://batomulti/comeback.gd")
+const Pairing := preload("res://batomulti/pairing.gd")
 
 
 func _bm():
@@ -40,8 +41,11 @@ func start_new_run(is_ranked: bool = false, set_id: String = "starter"):
 		return super(is_ranked, set_id)
 	var was: bool = session_online
 	session_online = false
-	super(false, set_id)
+	super(false, set_id if set_id != "" else "starter")
 	session_online = was
+	if set_id == "" and data != null:
+		data.active_set_id = ""                    # region All (0.6.11): the game's set filters read "" as every set
+		save_full()
 	b.lobby_run_started(data)
 
 
@@ -77,6 +81,23 @@ func process_post_battle_progression(target_data: RunData):
 	if _bm_on() and target_data.pending_event_id == Comeback.VANILLA:
 		target_data.pending_event_id = Comeback.ID
 		Comeback.ensure(target_data)
+
+
+## Synchronized events (0.6.11): in a lobby run every player meets the SAME event on the same Day (3 / 6 / 9).
+## The pick comes from the host's lobby seed (START + snapshots) + Day + region, never this PC's RNG or its
+## profile (the game's tutorial events and unlock gates follow each player's games_played). Host setting
+## "sync_events" off = the game's own per-player pick.
+func _pick_event_for_round(event_tier: int, next_round: int, set_id: String = "") -> EventData:
+	var b = _bm()
+	if not _bm_on() or b.client == null or not bool(b.client.state.settings.get("sync_events", true)) \
+			or not GameDatabase.has_method("_build_event_pool"):
+		return super(event_tier, next_round, set_id)
+	var pool: Array = GameDatabase._build_event_pool(event_tier, -1, set_id)
+	if pool.is_empty() and set_id != "":
+		pool = GameDatabase._build_event_pool(event_tier, -1, "")    # the game's own fallback: the full pool
+	pool.sort_custom(func(x, y): return str(x.id) < str(y.id))
+	var i := Pairing.event_index(pool.size(), int(b.client.state.lobby_seed), next_round)
+	return pool[i] if i >= 0 else null
 
 
 ## Chest mirror: what was taken from the gift box reaches the spectators (shown, then cleared).

@@ -55,12 +55,12 @@ BatoMulti version and Steam running. This is a community mod, not an official mu
     <td width="50%"><img src="docs/screenshots/07_results.png" alt="The results screen with every player's placement"><br><sub><b>Results</b> — final placements, then back to the menu with one click.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/0.6.9/lobby_free_pick.png" alt="Host settings: Battle speed x4 lit by default, and the new Trainers row with Random 3 and Free pick (Free pick lit)"><br><sub><b>Host settings</b> (0.6.9) — battles start at <b>x4</b>; <b>Trainers: Random 3 / Free pick</b>.</sub></td>
-    <td width="50%"><img src="docs/screenshots/0.6.9/trainers_free_pick.png" alt="Free pick: the game's trainer cards three per row in a scrolling list"><br><sub><b>Free pick</b> (0.6.9) — every trainer, three per row, scroll down for the rest; same order for every player.</sub></td>
+    <td width="50%"><img src="docs/screenshots/09_region_host.png" alt="Host settings with the new row: Region All, Pantra, Jinto (Jinto lit) and Events Same for all, Own luck (Same for all lit)"><br><sub><b>Region + Events</b> (0.6.11) — the host picks <b>All</b>, <b>Pantra</b> or <b>Jinto</b>, and <b>Same for all</b> events.</sub></td>
+    <td width="50%"><img src="docs/screenshots/10_region_guest.png" alt="A guest's room panel: the host's settings greyed out, Jinto and Same for all lit"><br><sub><b>Guests</b> see the host's region and event mode (locked), on joining and whenever they change.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/0.6.8/comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Tactical Draft</b> — on your last life, pick one of three units (Defense / Offense / Support), each with its picture.</sub></td>
-    <td width="50%"><img src="docs/screenshots/0.6.8/comeback_reforge_picker.png" alt="Reforge: the side panel with three species and their pictures next to the game's unit picker"><br><sub><b>Reforge</b> — reshape a bench unit into one of three species, previewed next to your team before you confirm.</sub></td>
+    <td width="50%"><img src="docs/screenshots/11_free_pick.png" alt="Free pick: the game's trainer cards three per row in a scrolling list"><br><sub><b>Free pick</b> — the host can let every player choose any trainer, three per row.</sub></td>
+    <td width="50%"><img src="docs/screenshots/12_comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Comeback</b> — on your last life, pick a boost such as <b>Tactical Draft</b> (Defense / Offense / Support).</sub></td>
   </tr>
 </table>
 
@@ -113,6 +113,13 @@ see the unofficial-mod disclaimer below.
   three offers, default) or **Free pick**: every player chooses any trainer from the whole roster. The
   trainers keep the game's own cards, three per row, in a list you scroll with the mouse wheel; they are
   sorted the same way for everyone, so each trainer is always in the same spot.
+- **Region pick** *(new in 0.6.11)* — the host's **Region** setting: **All** (default: every region's
+  units, trainers, trinkets and events in one pool), **Pantra** or **Jinto** (only that region). Guests
+  see the host's choice on joining and whenever it changes; every run in the match starts in it.
+- **Same events for everyone** *(new in 0.6.11)* — the host's **Events** setting: **Same for all**
+  (default) gives every player the **same event** on Day 3, 6 and 9, at the same time, picked from the
+  host's match seed; your own profile (new player or veteran) no longer changes which event you get.
+  **Own luck** lets each player's game pick its own events, like before. New match, new events.
 - **Works with Mod Loader** *(fixed in 0.6.10)* — the community Mod Loader (`Mods\mod_loader.gd`) and
   BatoMulti run side by side: the **Multiplayer** button is on the main menu whatever order their lines
   have in `override.cfg`. The setup keeps Mod Loader's line (and its `Mods` folder) untouched.
@@ -162,7 +169,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.10.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.11.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -181,7 +188,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.6.10-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.6.11-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -198,8 +205,8 @@ Prefer a zip? Download **`BatoMulti-v0.6.10-ManualInstall.zip`** from the [Relea
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.10 only joins
-0.6.10 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.11 only joins
+0.6.11 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -207,7 +214,8 @@ setup file) when a new version is out.
 Everyone needs BatoMulti installed (same version) and Steam running.
 
 - **Host:** Multiplayer → give the room a name (and a password if you want) → pick the shop timer,
-  lives, battle speed (4x by default), trainers (**Random 3** or **Free pick**) and room size → keep the random **room code** or type your own (4-8 letters /
+  lives, battle speed (4x by default), trainers (**Random 3** or **Free pick**), region (**All**, **Pantra**
+  or **Jinto**), events (**Same for all** or **Own luck**) and room size → keep the random **room code** or type your own (4-8 letters /
   digits) → **Create room** → press **Copy** and send the code to your friends → **Start match** once
   everyone is ready (or **Force Start** → **Confirm Force Start?** to go without waiting).
 - **Friends:** Multiplayer → type the code → **Join**. Or open **Browse rooms**, find the room and
@@ -246,6 +254,14 @@ is left; the leaderboard shows the standings live and the results screen gives e
 bracket tool, no separate games to organise. Eliminated players and spectators can keep watching
 anyone live.
 
+### Do all players get the same events?
+
+Yes (since 0.6.11), with the host's **Events** setting on **Same for all** (the default). The events on
+Day 3, 6 and 9 are then the same for every player in a match, at the same time: the host's match seed
+picks them, not each player's own luck or profile. **Own luck** switches back to per-player events. The host's
+**Region** setting (**All**, **Pantra** or **Jinto**) also decides which region's units, trainers,
+trinkets and events everyone plays with.
+
 ### Can I watch friends without joining the match?
 
 Yes. Choose **Spectator** in the lobby before the match starts. Spectators can watch
@@ -263,12 +279,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.10.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.11.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.10.cmd uninstall
-   BatoMulti-Setup-0.6.10.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.10.cmd status
+   BatoMulti-Setup-0.6.11.cmd uninstall
+   BatoMulti-Setup-0.6.11.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.11.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
