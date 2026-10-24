@@ -155,6 +155,7 @@ func reset_for_match() -> void:
 	for id in seats:
 		var s: Dictionary = seats[id]
 		s.lives = int(settings.lives)
+		s.erase("lives_spent")                     # the new run's Red Coin count starts at 0 (spend_lives)
 		s.wins = 0
 		s.losses = 0
 		s.status = SPECTATOR if is_spectator_seat(s) else ALIVE
@@ -230,6 +231,17 @@ func _lose(id: int, cost: int) -> void:
 	elif s.lives == 0:
 		s.status = ELIMINATED
 		s.out_round = round_n
+
+
+## Lives the player spent in the shop (the game's Red Coin, red_coin_multi.gd). `total` = the board's running
+## count: only its new part costs lives, never the last one (the item needs 2), and lives never go up.
+func spend_lives(id: int, total: int) -> void:
+	var s: Dictionary = seats.get(id, {})
+	if s.is_empty() or s.status != ALIVE:
+		return
+	var done := int(s.get("lives_spent", 0))
+	s.lives = int(s.lives) - clampi(total - done, 0, maxi(0, int(s.lives) - 1))
+	s["lives_spent"] = maxi(total, done)
 
 
 ## On the last life: the second chance is used (the leaderboard's broken heart).

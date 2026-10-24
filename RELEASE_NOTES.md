@@ -1,50 +1,51 @@
-# BatoMulti 0.6.11 — Region pick & same events for everyone
+# BatoMulti 0.6.12 — Hotfix for Batomon Showdown 1.4.1
 
 Batomon Showdown, multiplayer: create a room, share the code (or let people find it in the room browser),
 and battle round after round until one trainer is left.
 
-**Updating from 0.6.2-0.6.10:** the main menu shows the update banner: **[Update Now]**, then
-**[Restart Now]**. Everyone in a room needs 0.6.11: 0.6.10 and 0.6.11 players can't share a room.
-Built and tested on Batomon Showdown **1.4.0**.
+**A compatibility and bug-fix update for the game's 1.4.1 balance patch.** No new features, no new
+settings: rooms play exactly like 0.6.11, with these fixes.
 
-## 🗺️ Host Region setting
+**Updating from 0.6.2-0.6.11:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.6.12: 0.6.11 and 0.6.12 players can't share a room.
+Built and tested on Batomon Showdown **1.4.1**.
 
-The host's settings have a new **Region** row: **All** · **Pantra** · **Jinto**.
+## 🥋 Black Belt works again
 
-- **All** (default for new rooms): units, trainers, trinkets and events from every region in one pool.
-- **Pantra** or **Jinto**: only that region's pool, just like picking it for a solo run.
-- The names come from the game itself, so a future region shows up on its own.
-- Guests see the host's choice (locked), on joining and live whenever the host changes it. Everyone's run
-  starts in that region when the match begins.
+The game's 1.4.1 patch moved Black Belt's bonus (the lone Fighting monster's **On Victory**) from "at the
+start of battle" to "after each battle". BatoMulti's room battles never ran that new step, so in rooms
+Black Belt did nothing at all. Now it fires after every battle, win or lose, exactly like in a solo run,
+on both sides of a battle.
 
-## 🎲 Same events for everyone
+## 🪙 Red Coin really costs the life
 
-New host setting **Events**, next to Region: **Same for all** (default) · **Own luck**.
+Red Coin trades 1 life for 20 gold. In a room the host keeps everyone's lives, and the next round put the
+spent life back while you kept the gold. Now the spent life goes to the host: the room's count (and the
+leaderboard) takes it at the start of the round.
 
-With **Same for all**, the random events on **Day 3, 6 and 9** are the **same for every player** in a
-match, at the same time. The host's match seed (sent to everyone when the match starts, and kept through reconnects and host
-changes) picks them, so no player gets a luckier event than the others.
+- It still can't take your last life (the item needs 2 lives), as in the game.
+- Each match counts from zero.
 
-- Every player's own profile no longer matters: the game's tutorial events for new players and its
-  "games played" unlocks don't apply inside a lobby, so a new player and a veteran see the same event.
-- With **Second Chance**, the comeback comes first and the round's event right after it: the same event
-  as everyone else.
-- Each new match still rolls new events; they are only shared inside one match.
-- **Own luck** = each player's game picks its own events, like 0.6.10 and solo runs.
-- Guests see the host's choice (locked), on joining and whenever the host changes it.
-- What an event offers can still fit your own team (for example a monster that matches your types),
-  exactly like in a solo run: the **event** is the same for everyone, your board is your own.
+## 🌱 Sproutquill / Fernfowl evolve in rooms
 
-Nothing else changes: **4x** battles, **Free pick** trainers, the reworked comeback and Mod Loader
-support all work as before.
+These Jinto units evolve after your team has dealt enough battle damage. In rooms that damage was never
+counted, so they never evolved. Now every room battle counts it, as in a solo run.
+
+## ✅ Checked against the 1.4.1 patch
+
+- Basic Bait (cost 0 -> 10), Summon Potion (5 -> 10), Glamour Potion (+30 sell value per monster) and
+  Fate Potion (double base sell value, 8 free rerolls) come straight from the game: nothing to change.
+- Tempo Charm, Metal Bat and Ancient Plume are Unique now: the game's shop and events never offer a
+  second copy, BatoMulti's comeback trinkets use the same rule, and every player's game reads boards
+  the same way, so the battles stay in sync.
 
 ## Install
 
-- **`BatoMulti-Setup-0.6.11.cmd`** (recommended): close the game, double-click it, launch the game through
+- **`BatoMulti-Setup-0.6.12.cmd`** (recommended): close the game, double-click it, launch the game through
   Steam. It finds the game, sets other mods aside safely and uninstalls when run again.
-- **`BatoMulti-v0.6.11-ManualInstall.zip`** (also for mod sites) with only the `batomulti` scripts,
+- **`BatoMulti-v0.6.12-ManualInstall.zip`** (also for mod sites) with only the `batomulti` scripts,
   `override.cfg` and a plain-text `README.txt` — nothing to run. Extract it next to
   `batomon_showdown.exe`. It replaces `override.cfg`, so other autoload mods stop loading unless you
   merge (keep Mod Loader's `ModLoader=` line); see the README.
 
-**Downloads:** `BatoMulti-Setup-0.6.11.cmd` (recommended, 1-click setup) or `BatoMulti-v0.6.11-ManualInstall.zip` (plain files, see its README.txt).
+**Downloads:** `BatoMulti-Setup-0.6.12.cmd` (recommended, 1-click setup) or `BatoMulti-v0.6.12-ManualInstall.zip` (plain files, see its README.txt).

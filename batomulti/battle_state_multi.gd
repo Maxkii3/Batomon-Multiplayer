@@ -167,7 +167,12 @@ func _commit_ghost_sim_results(ghost_sim: BattleSimulation, ghost_p1_data: RunDa
 		mine.current_wins += 1
 	elif loses_life:
 		mine.lose_lives(_calculate_lives_loss(mine.current_round))
-	mine.damage_dealt_total += int(ghost_sim.data.team_damage_dealt[me])
+	# the game's RunData.commit_battle_damage with MY team index (it reads team 0): Sproutquill / Fernfowl progress
+	var dealt := int(ghost_sim.data.team_damage_dealt[me])
+	for unit in mine.team + mine.bench + mine.overflow:
+		if unit and unit.ability_instance:
+			unit.ability_instance.on_battle_damage_committed(unit, mine, dealt if mine.team.has(unit) else 0)
+	mine.damage_dealt_total += dealt
 	_collect_battle_rewards(ghost_sim, mine)
 	mine.restore_battle_transforms(false)
 	for unit in mine.team:
@@ -176,6 +181,10 @@ func _commit_ghost_sim_results(ghost_sim: BattleSimulation, ghost_p1_data: RunDa
 				unit.ability_instance.on_victory(unit, mine)
 			else:
 				unit.ability_instance.on_defeat(unit, mine)
+	if mine.has_method("notify_battle_end"):              # game 1.4.1: Black Belt's On Victory runs after each battle
+		_swap_sides(ghost_sim)                             # its passive reads sim team 0 as the local player
+		mine.notify_battle_end(ghost_sim)
+		_swap_sides(ghost_sim)
 	mine.restore_battle_levels()
 	mine.restore_battle_transforms()
 	var win_bonus = mine.blackboard.get("pending_win_bonus", 0)
@@ -197,6 +206,13 @@ func _commit_ghost_sim_results(ghost_sim: BattleSimulation, ghost_p1_data: RunDa
 	RunManager.determine_post_battle_state()            # the BatoMulti layer: never run_summary
 	_grant_lasso_copy(mine)
 	RunManager.save_full()
+
+
+## Side 1 only: team ids 0 <-> 1 on the finished ghost sim (called twice = restored).
+func _swap_sides(sim: BattleSimulation) -> void:
+	if me == 1:
+		for u in sim.data.battle_units:
+			u.team_id = 1 - u.team_id
 
 
 func _start_visual_battle(is_replay: bool):

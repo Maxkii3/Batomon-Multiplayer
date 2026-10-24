@@ -990,6 +990,10 @@ func _resolve() -> void:
 			state.forfeit(id)
 			continue
 		boards[id] = {"packed": pb, "dict": dict}
+		var bb = dict.get("blackboard")
+		var spent = bb.get("bm_lives_spent", 0) if bb is Dictionary else 0
+		if _boards.has(id) and (spent is int or spent is float):
+			state.spend_lives(id, int(spent))       # Red Coin: the room's lives are the host's
 	if _end_if_over():
 		return                                  # the forfeits left one player: no round to fight
 	var fighters: Array = boards.keys()

@@ -18,8 +18,8 @@ tournament tools, no restarts between rounds — just share the room code.
 [Play with friends](#-how-to-play-with-friends) ·
 [Report a bug](https://github.com/Maxkii3/Batomon-Multiplayer/issues)
 
-Requires Batomon Showdown on **Steam for Windows**. Everyone playing needs the same
-BatoMulti version and Steam running. This is a community mod, not an official multiplayer update.
+Requires Batomon Showdown on **Steam for Windows** (built and tested on game **1.4.1**). Everyone playing
+needs the same BatoMulti version and Steam running. This is a community mod, not an official multiplayer update.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
 
@@ -120,6 +120,10 @@ see the unofficial-mod disclaimer below.
   (default) gives every player the **same event** on Day 3, 6 and 9, at the same time, picked from the
   host's match seed; your own profile (new player or veteran) no longer changes which event you get.
   **Own luck** lets each player's game pick its own events, like before. New match, new events.
+- **Ready for game 1.4.1** *(fixed in 0.6.12)* — **Black Belt** works again in rooms: its lone Fighting
+  unit's On Victory now fires after **every** battle, as in the game's 1.4.1 patch. **Red Coin** really costs
+  the life: the host's room count takes it (before, the next round gave it back while you kept the gold).
+  **Sproutquill / Fernfowl** now count your team's battle damage toward their evolution in rooms too.
 - **Works with Mod Loader** *(fixed in 0.6.10)* — the community Mod Loader (`Mods\mod_loader.gd`) and
   BatoMulti run side by side: the **Multiplayer** button is on the main menu whatever order their lines
   have in `override.cfg`. The setup keeps Mod Loader's line (and its `Mods` folder) untouched.
@@ -169,7 +173,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.11.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.6.12.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -188,7 +192,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.6.11-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.6.12-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -205,8 +209,8 @@ Prefer a zip? Download **`BatoMulti-v0.6.11-ManualInstall.zip`** from the [Relea
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.11 only joins
-0.6.11 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.12 only joins
+0.6.12 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -279,12 +283,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.11.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.6.12.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.11.cmd uninstall
-   BatoMulti-Setup-0.6.11.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.11.cmd status
+   BatoMulti-Setup-0.6.12.cmd uninstall
+   BatoMulti-Setup-0.6.12.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.6.12.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

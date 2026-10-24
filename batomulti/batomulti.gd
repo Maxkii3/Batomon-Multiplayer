@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.11"
+const VERSION := "0.6.12"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -54,6 +54,7 @@ const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
 const BattleViewMirror := preload("res://batomulti/battle_view_mirror.gd")
 const EffectDirectorMirror := preload("res://batomulti/effect_director_mirror.gd")
 const TrainerSelectMulti := preload("res://batomulti/trainer_select_multi.gd")
+const RedCoinMulti := preload("res://batomulti/red_coin_multi.gd")
 const TRAINER_SELECT_STATE := "res://game/states/trainer_select_state.gd"
 const SHOP_STATE := "res://game/states/shop_state.gd"
 ## game script -> BatoMulti subclass, swapped in while a lobby fight is pending (plan.md Phase 1)
@@ -205,6 +206,9 @@ func _ready() -> void:
 	if not integrity_ok():
 		return
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	var coin = GameDatabase.get_item_by_id("red_coin")       # lobby runs: its spent life goes to the host (red_coin_multi.gd)
+	if coin != null:
+		coin.effect_script = RedCoinMulti
 	cfg.load(CFG_PATH)
 	font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else ThemeDB.fallback_font
 	layer = CanvasLayer.new()
