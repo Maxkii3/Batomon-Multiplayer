@@ -62,6 +62,22 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/11_free_pick.png" alt="Free pick: the game's trainer cards three per row in a scrolling list"><br><sub><b>Free pick</b> — the host can let every player choose any trainer, three per row.</sub></td>
     <td width="50%"><img src="docs/screenshots/12_comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Comeback</b> — on your last life, pick a boost such as <b>Tactical Draft</b> (Defense / Offense / Support).</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/13_tier4_paragon.png" alt="Tier 4 event Paragon: its banner art and four choices, one reading +25% Damage, Shields, Heals and Status DoTs to all units"><br><sub><b>Tier 4 events</b> (0.7.0) — Day 12, 15, then every 3 days: the same event for everyone, <b>4 choices</b>, its own banner.</sub></td>
+    <td width="50%"><img src="docs/screenshots/14_tier4_mythic_forge.png" alt="Tier 4 event Mythic Forge with Reforge, Apprentice, Master Polish and Master Smelter (+30% Damage to all units)"><br><sub><b>Mythic Forge</b> — every card says exactly what it boosts (here: <b>+30% Damage</b>).</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/15_trainer_ban_window.png" alt="The Ban Trainer window: trainer portraits, three of them greyed out with a red X"><br><sub><b>Trainer Bans</b> (0.7.0) — the host clicks portraits to ban them (greyed, red X); at least 3 always stay.</sub></td>
+    <td width="50%"><img src="docs/screenshots/16_trainer_ban_row.png" alt="Host settings: the Trainers row with Random 3, Free pick, Ban Trainer and (3) Banned"><br><sub>The room row shows the status: <b>None</b> or <b>(n) Banned</b>; guests see the list read-only.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/17_trainer_ban_free_pick.png" alt="Free pick: the banned Chemist card greyed out with a red X next to two open trainers"><br><sub><b>Free pick</b> — banned cards stay in place, greyed and locked; <b>Random 3</b> never offers them.</sub></td>
+    <td width="50%"><img src="docs/screenshots/18_chat_lobby.png" alt="The room tab with a yellow Chat button next to the room code and a NEW badge on it"><br><sub><b>Room chat</b> (0.7.0) — the yellow <b>Chat</b> button next to the room code; <b>NEW</b> = unread lines.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/19_match_header.png" alt="The shop's top bar: a compact NEXT MATCH pill, the heart counter, Day 2, the chat bubble with a red pip; the leaderboard shows one player shopping and two ready"><br><sub><b>Cleaner header</b> (0.7.0) — compact, draggable <b>NEXT MATCH</b>, the hearts visible again, the chat bubble (pip = unread), and <b>ready</b> / <b>shopping</b> for every player.</sub></td>
+    <td width="50%"><img src="docs/screenshots/20_chat_ingame.png" alt="The Room chat window open in the shop: join notices, three players' lines with times, the input field and Send"><br><sub><b>Chat in the match</b> — names, times, notices; any language; typing never presses the game's hotkeys.</sub></td>
+  </tr>
 </table>
 
 ---
@@ -89,6 +105,22 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Tier 4 events** *(new in 0.7.0)* — the game's events stop after Day 9; in a room, long matches meet a
+  **Tier 4 event** on **Day 12**, **Day 15**, then **every 3 days**: the same event for every player, each
+  with **4 choices** and its own banner art (Fusion Altar, Champion's Arrival, Legendary Armory, Awakening
+  Rite, Chrono Surge, Mythic Forge, Mythic Vault, Paragon, Overdrive Core). Output buffs say exactly what
+  they boost: **+X% Damage, Shields, Heals & Status DoTs**. Rooms can start with up to **999 lives**
+  (above 10, the battle shows 10 hearts and a **+n** badge).
+- **Trainer Bans** *(new in 0.7.0)* — the host's **Ban Trainer** button opens the room region's trainers:
+  click portraits to ban them (greyed out, red X; at least 3 stay). **Free pick** keeps banned cards in
+  place, locked; **Random 3** never offers them; the room refuses a banned trainer's board.
+- **Room chat** *(new in 0.7.0)* — a yellow **Chat** button in the lobby and a pixel chat bubble in the
+  match's top bar (a pulsing **NEW** / glowing pip = unread). Names, times, join / leave notices,
+  120 characters, any language (Thai, Japanese, Korean, Chinese...). While you type, the game's hotkeys
+  are paused, so typing never rerolls or sells. Nothing is saved: the chat ends with the room.
+- **Cleaner match header** *(new in 0.7.0)* — **NEXT MATCH** is a compact pill you can **drag** anywhere
+  (the game's heart counter shows again), and the live leaderboard shows **ready** / **shopping** /
+  **fighting** for every player.
 - **1-click setup** — one file installs everything. Already using another mod? It's
   put safely aside and comes back exactly as it was when you uninstall.
 - **Room browser** — the **Browse rooms** tab lists open rooms with their name, host, players,
@@ -173,7 +205,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.6.12.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.0.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -192,7 +224,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.6.12-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.0-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -209,8 +241,8 @@ Prefer a zip? Download **`BatoMulti-v0.6.12-ManualInstall.zip`** from the [Relea
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.6.12 only joins
-0.6.12 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.0 only joins
+0.7.0 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -283,12 +315,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.6.12.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.0.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.6.12.cmd uninstall
-   BatoMulti-Setup-0.6.12.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.6.12.cmd status
+   BatoMulti-Setup-0.7.0.cmd uninstall
+   BatoMulti-Setup-0.7.0.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.0.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

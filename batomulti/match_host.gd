@@ -86,6 +86,9 @@ var _guard_sig := ""
 var _info_last: Dictionary = {}
 var _info_at := -1000.0
 var _boards: Dictionary = {}      # id -> packed board dict for the current round
+const CHAT_BURST := 5             # chat lines per member per CHAT_WINDOW s (more = dropped: no flood)
+const CHAT_WINDOW := 5.0
+var _chat_times: Dictionary = {}   # member id -> its recent chat line times (flood check)
 var _last_board: Dictionary = {}  # id -> packed board of the last resolved round
 var _runs: Dictionary = {}        # id -> [packed run, raw, hash] (RunData.to_dictionary at ready)
 var _last_opp: Dictionary = {}
@@ -278,6 +281,8 @@ func handle(from: int, msg: Dictionary) -> void:
 			_on_lobby_ready(from, bool(b.on))
 		P.BACK:
 			_on_back(from, str(b.name))
+		P.SAY:
+			_on_say(from, str(b.text))
 		P.SYNC_REQ:
 			if state.seats.has(from) and state.seats[from].status != LobbyState.LEFT:
 				stats.sync_req += 1
@@ -302,6 +307,7 @@ func _on_hello(from: int, b: Dictionary) -> void:
 		state.set_connected(from, true)
 		_log("%s joined" % b.name)
 		_broadcast_lobby()
+		chat_notice("%s joined the room" % state.seats[from].name)
 		return
 	# match running: only a seat of this match may come back, with its session token
 	var seat: Dictionary = state.seats.get(from, {})
@@ -480,6 +486,7 @@ func _drop(id: int, why: String) -> void:
 	if not state.seats.has(id):
 		return
 	_log("%s %s" % [state.seats[id].name, why])
+	chat_notice("%s %s" % [state.seats[id].name, "left the room" if why == "left" else why])
 	_dc_since.erase(id)
 	_watch.erase(id)
 	_shop_sent.erase(id)
@@ -497,6 +504,30 @@ func _drop(id: int, why: String) -> void:
 			_fighting.erase(id)
 			if _reported.size() >= _fighting.size():
 				_finish_round()
+
+
+## Room chat (protocol 9): only a seated member speaks; the host stamps the seat's name (never one the
+## client sends) and the time, cleans the text, and drops a flood (CHAT_BURST lines per CHAT_WINDOW s).
+## Relayed to every member like a lobby message; nothing of the match state is touched, nothing is kept.
+func _on_say(from: int, text: String) -> void:
+	var seat: Dictionary = state.seats.get(from, {})
+	var clean := P.clean_chat(text)
+	if seat.is_empty() or seat.status == LobbyState.LEFT or clean == "":
+		_bump("chat_dropped")
+		return
+	var times: Array = _chat_times.get(from, []).filter(func(at): return now - float(at) < CHAT_WINDOW)
+	if times.size() >= CHAT_BURST:
+		_bump("chat_flood")
+		return
+	times.append(now)
+	_chat_times[from] = times
+	_bump("chat")
+	_broadcast(P.CHAT, {"id": from, "name": str(seat.name), "text": clean, "at": int(Time.get_unix_time_from_system())})
+
+
+## A room notice in the chat (id 0): someone joined / left / was kicked.
+func chat_notice(text: String) -> void:
+	_broadcast(P.CHAT, {"id": 0, "name": "", "text": P.clean_chat(text), "at": int(Time.get_unix_time_from_system())})
 
 
 func _on_at_shop(from: int, r: int) -> void:
@@ -938,6 +969,10 @@ func _on_ready(from: int, b: Dictionary) -> void:
 		return
 	if _boards.has(from):
 		stats.dup_ready += 1                   # first board wins; ready spam changes nothing
+		return
+	var bans: Array = state.settings.get("banned_trainers", [])
+	if not bans.is_empty() and str(P.unpack_board(b.board, int(b.raw), str(b.hash)).get("trainer_id", "")) in bans:
+		_bump("banned_trainer")                # 0.7.0: a banned trainer (a modified client): no board this round
 		return
 	_boards[from] = {"board": b.board, "raw": int(b.raw), "hash": str(b.hash)}
 	if int(b.run_raw) > 0:

@@ -26,7 +26,10 @@ const LobbyState := preload("res://batomulti/lobby_state.gd")
 const RoomInfo := preload("res://batomulti/room_info.gd")
 const BROWSE_REFRESH := 15.0       # s: the open browser re-lists the rooms by itself (never per frame)
 const KICK_CONFIRM := 3.0          # s the "Sure?" step of a Kick button stays armed
+const MAX_LIVES := 999             # 0.7.0: room lives uncapped in practice (the game's own run starts with 10)
 const UiTheme := preload("res://batomulti/ui_theme.gd")
+const TrainerBan := preload("res://batomulti/trainer_ban.gd")
+const ChatWindow := preload("res://batomulti/chat_window.gd")
 const SPEEDS := [1.0, 2.0, 4.0, 6.0, 8.0]   # host battle speed choices (every client plays battles at it)
 const COPIED_SECONDS := 1.5
 const COL_CODE := UiTheme.YELLOW           # the room code (with the game's dark outline)
@@ -69,6 +72,10 @@ var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); th
 var _speed_i := SPEEDS.find(LobbyState.DEFAULT_SETTINGS.battle_speed)   # x4 by default (0.6.9)
 var trainer_buttons: Array = []    # [Random 3, Free pick]: the room's trainer selection mode (0.6.9)
 var _free_trainers: bool = LobbyState.DEFAULT_SETTINGS.free_trainers
+var ban_btn: Button                # 0.7.0: opens the trainer ban window (host: edit, everyone else: look)
+var ban_label: Label               # "None" / "(n) Banned", live for every member
+var ban_window: TrainerBan         # built on first open
+var _bans: Array = []              # the room's banned trainer ids (the host's own; guests: the room's)
 var region_buttons: Array = []     # 0.6.11: [All, then the game's regions (Pantra, Jinto)]; region_ids[i] = its set id
 var region_ids: Array = []
 var _set_id: String = LobbyState.DEFAULT_SETTINGS.set_id
@@ -92,6 +99,8 @@ var _start_token := 0
 var roster_dots: Dictionary = {}   # seat id -> its StatusDot (tests)
 var _leave_btn: Button
 var _menu_btn: Button
+var chat_btn: Button               # 0.7.0: the room chat (yellow, next to the room code); "NEW" while unread
+var back_btn: Button               # 0.7.0: Back to match (the game's exit icon left me on the title mid-match)
 var _rejoin_btn: Button
 var _close_btn: Button
 var _guard_actions := {}
@@ -300,6 +309,9 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_copy_btn = _button("Copy", func(): copy_code())
 	_copy_btn.tooltip_text = "Copy the room code to the clipboard"
 	code_row.add_child(_copy_btn)
+	chat_btn = _button("Chat", func(): hub.open_chat(), "BmPrimary")
+	chat_btn.tooltip_text = "Room chat: everyone in this room (players and spectators)"
+	code_row.add_child(chat_btn)
 	for c in code_row.get_children():
 		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
@@ -323,7 +335,8 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_minutes = _spin(0.5, 10.0, 0.5, 2.0)
 	host_row.add_child(_minutes)
 	host_row.add_child(_label("  Lives", ""))
-	_lives = _spin(1, 30, 1, 10)
+	_lives = _spin(1, MAX_LIVES, 1, 10)
+	_lives.tooltip_text = "Starting lives of every player (the game's own is 10; more are shown as 10 hearts + the rest)"
 	host_row.add_child(_lives)
 	vb.add_child(host_row)
 	var rule_row := HBoxContainer.new()
@@ -364,6 +377,13 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 			else "The game's usual 3 random trainers to choose from"
 		trainer_buttons.append(tb)
 		trainer_row.add_child(tb)
+	ban_btn = _button("Ban Trainer", func(): open_bans())
+	ban_btn.tooltip_text = "Trainers nobody may pick in this match (the host chooses; everyone can look)"
+	trainer_row.add_child(_label(" ", ""))
+	trainer_row.add_child(ban_btn)
+	ban_label = _label(TrainerBan.status_text(_bans), "BmDim")
+	ban_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	trainer_row.add_child(ban_label)
 	vb.add_child(trainer_row)
 	_style_trainers()
 	var region_row := HBoxContainer.new()
@@ -422,6 +442,9 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	action_bar.add_child(_leave_btn)
 	_menu_btn = _button("Return to main menu", func(): hub.return_to_menu(), "BmDanger")
 	action_bar.add_child(_menu_btn)
+	back_btn = _button("Back to match", func(): hub.resume_match(), "BmPrimary")
+	back_btn.tooltip_text = "Your match is still running: go back to your run"
+	action_bar.add_child(back_btn)
 	_members = _label("", "BmDim")
 	_members.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_members.custom_minimum_size = Vector2(STATUS_MIN_W, 0)
@@ -463,6 +486,7 @@ func settings() -> Dictionary:
 	return {"shop_seconds": _minutes.value * 60.0, "lives": int(_lives.value),
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
 		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers, "set_id": _set_id,
+		"banned_trainers": _bans.duplicate(),
 		"sync_events": _sync_events,
 		"max_players": int(max_players_spin.value), "max_spectators": int(max_specs_spin.value),
 		"room_name": RoomInfo.clean_name(name_edit.text), "password": pw_edit.text.strip_edges()}
@@ -490,6 +514,8 @@ func _pick_trainers(free: bool) -> void:
 
 func _pick_region(id: String) -> void:
 	_set_id = id
+	_bans = TrainerBan.keep_playable(_bans, id)        # a smaller region still leaves 3 unbanned trainers
+	_refresh_bans(true)
 	_style_regions()
 	_push_settings()
 
@@ -519,6 +545,41 @@ func _style_trainers() -> void:
 func _style_speeds() -> void:
 	for i in speed_buttons.size():
 		speed_buttons[i].theme_type_variation = "BmToggleOn" if i == _speed_i else "BmToggleOff"
+
+
+## The ban window (built on first use) over the panel, centred on the screen.
+func open_bans() -> void:
+	if ban_window == null:
+		ban_window = TrainerBan.new()
+		ban_window.top_level = true
+		ban_window.visible = false
+		ban_window.toggled.connect(_on_ban_toggled)
+		add_child(ban_window)
+	ban_window.visible = true
+	refresh()
+	ban_window.reset_size()
+	ban_window.position = ((get_viewport_rect().size - ban_window.size) * 0.5).floor()
+
+
+## Host only (the window is read-only otherwise): toggle, then the room gets it like every host setting.
+func _on_ban_toggled(id: String) -> void:
+	var before := _bans
+	_bans = TrainerBan.toggle(_bans, id, _set_id)
+	if _bans == before:
+		ban_window.note.text = "At least %d trainers must stay unbanned" % TrainerBan.MIN_LEFT
+		return
+	_refresh_bans(true)
+	_push_settings()
+
+
+## The "None" / "(n) Banned" label (names in its tooltip) and the open window.
+func _refresh_bans(editable: bool) -> void:
+	ban_label.text = TrainerBan.status_text(_bans)
+	ban_label.tooltip_text = "Banned: " + ", ".join(_bans.map(func(id):
+		var t = GameDatabase.get_trainer_by_id(id)
+		return t.name if t != null else id)) if not _bans.is_empty() else "No trainer is banned"
+	if ban_window != null and ban_window.visible:
+		ban_window.show_bans(_set_id, _bans, editable)
 
 
 ## The code to share: the room's code in a room, else the (valid) code typed in the field.
@@ -631,6 +692,9 @@ func refresh() -> void:
 	_leave_btn.disabled = not in_room
 	_menu_btn.visible = hub.lobby_run_live() or (hub.client != null and hub.client.is_spectating())
 	_rejoin_btn.visible = t != null and not in_room and not hub.active_match().is_empty()
+	back_btn.visible = hub.can_resume_match()
+	chat_btn.visible = in_room
+	ChatWindow.badge(chat_btn, in_room and hub.chat_unread)
 	for c in [_minutes, _lives]:
 		c.editable = (not in_room) or (is_host and lobby)
 	_tie.disabled = in_room and not (is_host and lobby)
@@ -668,6 +732,9 @@ func refresh() -> void:
 	for b in event_buttons:
 		b.disabled = speed_locked
 	_style_events()
+	if speed_locked and hub.client != null:
+		_bans = TrainerBan.banned_of(hub.client.state.settings)   # guests (and everyone in a match) see the room's list
+	_refresh_bans(not speed_locked)
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:
@@ -686,6 +753,8 @@ func refresh() -> void:
 		set_status("Steam is not running. Multiplayer needs the Steam version of the game with Steam open.", true)
 	elif hub.save_blocked != "" and not in_room:
 		set_status(hub.save_blocked, not hub.save_blocked.begins_with("Checking"))
+	elif back_btn.visible:
+		set_status("Your match is still running (round %d): press Back to match." % hub.client.state.round_n)
 	elif not in_room and not on_menu and not hub.lobby_run_live():
 		set_status("Open Multiplayer from the main menu to create or join a room.")
 
@@ -1219,8 +1288,13 @@ func _seated() -> bool:
 
 ## While the code field has focus the game's own key actions (accept / cancel / ...) are muted,
 ## so typing a code can't press menu buttons behind the modal.
+## 0.7.0 crash fix: a second mute overwrote the saved keys with the emptied lists -> every game action lost
+## its keys for good, and the game's key_prompt_label (InputMap.action_get_events(a)[0].as_text()) crashed
+## the release build at the next shop. Now: one mute at a time, and only missing keys are put back.
 func _mute_game_keys(on: bool) -> void:
 	if on:
+		if not _guard_actions.is_empty():
+			return
 		for a in InputMap.get_actions():
 			if str(a).begins_with("ui_text") or str(a) in ["ui_left", "ui_right", "ui_home", "ui_end"]:
 				continue                  # the field itself needs these
@@ -1229,7 +1303,8 @@ func _mute_game_keys(on: bool) -> void:
 	else:
 		for a in _guard_actions:
 			for ev in _guard_actions[a]:
-				InputMap.action_add_event(a, ev)
+				if InputMap.has_action(a) and not InputMap.action_has_event(a, ev):
+					InputMap.action_add_event(a, ev)
 		_guard_actions.clear()
 
 

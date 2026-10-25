@@ -14,6 +14,7 @@ extends "res://game/run/run_manager.gd"
 
 const Comeback := preload("res://batomulti/comeback.gd")
 const Pairing := preload("res://batomulti/pairing.gd")
+const Tier4 := preload("res://batomulti/tier4.gd")
 
 
 func _bm():
@@ -75,12 +76,18 @@ func upload_current_team(won_battle: bool, battle_metrics: Dictionary = {}):
 
 
 ## The game's Second Chance revive (lives 1) stays; its vanilla choices are replaced by the
-## BatoMulti comeback event (comeback.gd, v0.5.2).
+## BatoMulti comeback event (comeback.gd, v0.5.2). Day 12, 15, 18...: the room's Tier 4 event (tier4.gd, 0.7.0).
 func process_post_battle_progression(target_data: RunData):
+	var next_round := int(target_data.current_round) + 1
 	super(target_data)
-	if _bm_on() and target_data.pending_event_id == Comeback.VANILLA:
+	if not _bm_on():
+		return
+	if target_data.pending_event_id == Comeback.VANILLA:
 		target_data.pending_event_id = Comeback.ID
 		Comeback.ensure(target_data)
+	var b = _bm()
+	if b.client != null:
+		Tier4.queue(target_data, next_round, int(b.client.state.lobby_seed))
 
 
 ## Synchronized events (0.6.11): in a lobby run every player meets the SAME event on the same Day (3 / 6 / 9).

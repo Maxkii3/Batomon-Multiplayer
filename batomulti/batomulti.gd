@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.6.12"
+const VERSION := "0.7.0"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -54,7 +54,11 @@ const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
 const BattleViewMirror := preload("res://batomulti/battle_view_mirror.gd")
 const EffectDirectorMirror := preload("res://batomulti/effect_director_mirror.gd")
 const TrainerSelectMulti := preload("res://batomulti/trainer_select_multi.gd")
+const TrainerBan := preload("res://batomulti/trainer_ban.gd")
+const ChatWindow := preload("res://batomulti/chat_window.gd")
 const RedCoinMulti := preload("res://batomulti/red_coin_multi.gd")
+const Tier4 := preload("res://batomulti/tier4.gd")
+const LifeCountMulti := preload("res://batomulti/life_count_multi.gd")
 const TRAINER_SELECT_STATE := "res://game/states/trainer_select_state.gd"
 const SHOP_STATE := "res://game/states/shop_state.gd"
 ## game script -> BatoMulti subclass, swapped in while a lobby fight is pending (plan.md Phase 1)
@@ -62,6 +66,7 @@ const BATTLE_SWAPS := {
 	"res://game/states/battle_state.gd": "state",
 	"res://game/battle/battle_view.gd": "view",
 	"res://game/battle/start_effect_director.gd": "director",
+	"res://game/battle/life_count_container.gd": "lives",
 }
 const TITLE_STATE := "res://game/states/title_state.gd"
 const MENU_BOX := "CanvasLayer/TitleMenu/MarginContainer/VBoxContainer"
@@ -93,6 +98,9 @@ var spectator
 var broadcast                       # spectate_broadcast.gd: the watched player's shop, full screen
 var elim_hub                        # elimination_hub.gd: Spectate / Spectate <name> / Replay / Leave
 var next_bar                        # next_match_bar.gd: "NEXT MATCH: vs X" in the shop
+var chat_window: ChatWindow         # 0.7.0 room chat (one window: lobby panel + in-match button)
+var chat_btn_game: TextureButton    # the in-match Chat icon, in the top bar's icon row left of Dex / Settings / Exit
+var chat_unread := false            # a line came in while the chat was closed: "NEW" on both Chat buttons
 var early_spectate := false         # the player chose Spectate before the room confirmed the elimination
 var _early_target := 0
 var hub_actions: Array = []         # tests / live report: [action, id, msec]
@@ -101,6 +109,7 @@ var hub_done := false               # the player acted in the elimination hub th
 var next_seen: Dictionary = {}      # round -> [opp, ghost] the NEXT MATCH bar showed in that shop
 var next_checks: Array = []         # [round, shown opp, real opp, shown ghost, real ghost] per battle
 var scout                           # scout_view.gd: another player's last board (leaderboard row click)
+var luck_rolls: Array = []          # tests: Tier 4 Apprentice shops [round, mythic monster, mythic item]
 var results                         # results_view.gd: end-of-match placements + Return to main menu
 var updater                         # updater.gd: GitHub release check + main-menu banner + restart helper
 var font: Font
@@ -199,6 +208,8 @@ var events_suppressed := 0          # post-battle events / gift picks skipped be
 var early_reports := 0              # battle results sent from the post-battle event / gift screen
 var back_to_room_count := 0         # tests / live report: Back to room pressed
 var _open_panel_on_title := false   # Back to room: the Multiplayer panel opens on the title screen
+var _resume_pending := false        # Back to match pressed: the next sync puts the run back on screen
+var resumes := 0                    # tests
 
 
 func _ready() -> void:
@@ -250,6 +261,16 @@ func _ready() -> void:
 	board_ui.row_clicked.connect(_on_row_clicked)
 	board_ui.visible = false
 	layer.add_child(board_ui)
+	chat_window = ChatWindow.new()
+	chat_window.send_requested.connect(func(text): client.say(text))
+	chat_window.input.focus_entered.connect(panel._mute_game_keys.bind(true))   # typing never hits the game's hotkeys
+	chat_window.input.focus_exited.connect(panel._mute_game_keys.bind(false))
+	chat_window.visibility_changed.connect(func(): if not chat_window.visible: chat_window.input.release_focus())
+	layer.add_child(chat_window)
+	chat_btn_game = ChatWindow.icon_button()           # pixel speech bubble, top bar icon size
+	chat_btn_game.pressed.connect(open_chat)
+	chat_btn_game.visible = false
+	layer.add_child(chat_btn_game)
 	spectator.setup(client, transport, font, 8)
 	broadcast = Broadcast.new()
 	broadcast.name = "BatoMultiBroadcast"
@@ -274,6 +295,8 @@ func _ready() -> void:
 	layer.add_child(scout)                              # above the waiting cover: scouting while waiting is fine
 	next_bar = NextMatchBar.new()
 	next_bar.setup(client, transport, font, 8)
+	next_bar.position = cfg.get_value("ui", "next_bar_pos", next_bar.position)   # 0.7.0: draggable, the place is kept
+	next_bar.moved.connect(func(p): _save_ui("next_bar_pos", p))
 	next_bar.scout_requested.connect(func(id):
 		if scout != null and not (scout.visible and scout.target == id):
 			scout.toggle(id)
@@ -634,6 +657,8 @@ func _wire_client() -> void:
 	client.eliminated.connect(_on_eliminated)
 	client.kicked.connect(_on_kicked)
 	client.round_started.connect(_on_round_started)
+	client.chat_received.connect(_on_chat_line)
+	client.chat_cleared.connect(_on_chat_cleared)
 
 
 # ------------------------------------------------------------ main menu
@@ -644,14 +669,21 @@ func _on_node_added(n: Node) -> void:
 	if n is ShopUI and not (broadcast != null and broadcast.is_ancestor_of(n)) and not n.cancel_requested.is_connected(_on_shop_cancel):
 		n.cancel_requested.connect(_on_shop_cancel)  # (runs before shop_state's own handler: re-press is deferred)
 		_shop_cancel_button = weakref(n)
+	if n is ShopManager and not (broadcast != null and broadcast.is_ancestor_of(n)) and not n.shop_updated.is_connected(_on_shop_rolled):
+		n.shop_updated.connect(_on_shop_rolled.bind(n))   # Tier 4: Mythic luck, free items, free / half-price buys
+		n.item_bought.connect(_on_shop_bought.bind(n))
 	if n is TrinketSelectUI and not (broadcast != null and broadcast.is_ancestor_of(n)):
 		_gift_uis.append(weakref(n))                 # my own gift boxes (not the spectator copy)
 	var s = n.get_script()
 	if s != null and not _pending_fight.is_empty() and BATTLE_SWAPS.has(str(s.resource_path)):
-		swap_script(n, {"state": BattleStateMulti, "view": BattleViewMirror, "director": EffectDirectorMirror}[BATTLE_SWAPS[str(s.resource_path)]])
+		swap_script(n, {"state": BattleStateMulti, "view": BattleViewMirror, "director": EffectDirectorMirror,
+			"lives": LifeCountMulti}[BATTLE_SWAPS[str(s.resource_path)]])
 		return
 	if s != null and str(s.resource_path) == TRAINER_SELECT_STATE and free_trainer_pick():
 		swap_script(n, TrainerSelectMulti)           # the room's Free pick: every trainer, 3 per row, scrolling
+		return
+	if s != null and str(s.resource_path) == TRAINER_SELECT_STATE and not banned_trainers().is_empty():
+		_offer_unbanned()                            # Random 3 with bans: the game's screen shows these offers
 		return
 	if is_title_script(s):
 		title_state = n
@@ -1080,8 +1112,44 @@ func _inject_menu(ts: Node) -> void:
 		_open_panel_on_title = false
 		open_lobby_from_menu.call_deferred()             # Back to room: straight into the room's lobby
 		_status.call_deferred("Back in room %s: press Ready when you want to play again." % (transport.code if transport != null else ""))
+	elif seated_in_running_match():
+		open_lobby_from_menu.call_deferred()             # the game's own exit icon mid-match: offer the way back
+		_status.call_deferred("Your match is still running (round %d): press Back to match." % client.state.round_n)
 	elif can_auto_rejoin():
 		_auto_rejoin_title.call_deferred()
+
+
+## Live 2026-10-25: the game's own exit icon (shop / trainer screen) goes to the title while this player is
+## still seated in the running match (host or guest: the room plays on). The title hides a lobby run from
+## Continue and the auto-rejoin only runs outside a room, so nothing led back. Back to match = the crash
+## rejoin's restore without leaving the room: ask the room for a sync, _on_synced puts the run on screen.
+func seated_in_running_match() -> bool:
+	return transport != null and transport.code != "" and client != null and client.in_match() and not client.is_spectating()
+
+
+func can_resume_match() -> bool:
+	return seated_in_running_match() and on_title_screen()
+
+
+func resume_match() -> void:
+	if not can_resume_match():
+		return
+	_resume_pending = true
+	_status("Back to match: waiting for the room...")
+	client.request_sync()
+
+
+## Where the game's own Continue resumes a run (title_state._on_save_info_confirmed), minus a pending
+## battle: lobby battles come from the room.
+func _resume_state() -> String:
+	var d = get_node("/root/RunManager").data
+	if str(d.trainer_id) == "":
+		return "trainer_select"
+	if not d.pending_reward.is_empty():
+		return "trinket_select"
+	if str(d.pending_event_id) != "":
+		return "event"
+	return "shop"
 
 
 ## Live 2026-10-07: after a crash / game kill the relaunched game showed only the vanilla menu (Continue
@@ -1534,15 +1602,20 @@ func _on_synced(snap: Dictionary) -> void:
 		print("BatoMulti: background rejoin: back in room %s" % (transport.code if transport != null else ""))
 		if client.is_spectating():
 			open_lobby_from_menu()                    # out of lives meanwhile: show where the match is
-	if client.is_spectating() or lobby_run_live() or not client.in_match() or not on_title_screen():
+	var resume := _resume_pending
+	_resume_pending = false
+	if client.is_spectating() or (lobby_run_live() and not resume) or not client.in_match() or not on_title_screen():
 		return
-	if not restore_lobby_run(snap):
+	if not lobby_run_live() and not restore_lobby_run(snap):
 		open_lobby_from_menu()
 		_status("Back in the match, but your run could not be restored: you play on as a spectator.", true)
 		return
 	close_lobby()
+	if resume:
+		resumes += 1
+		print("BatoMulti: back to match (round %d) from the title" % client.state.round_n)
 	if title_state != null and is_instance_valid(title_state):
-		title_state.request_transition("shop")
+		title_state.request_transition(_resume_state() if resume else "shop")
 
 
 ## Puts this match's lobby run back into the RunManager after a crash. True when it worked.
@@ -1597,6 +1670,70 @@ func match_running() -> bool:
 func lobby_run_live() -> bool:
 	var rm = get_node_or_null("/root/RunManager")
 	return _lobby_run_id != "" and rm != null and rm.data != null and str(rm.data.run_id) == _lobby_run_id
+
+
+## The in-match Chat icon's place: the top bar's icon row (y 1), left of the game's Dex / Settings / Exit
+## icons (their row starts CHAT_ICON_RIGHT px from the right edge), clear of NEXT MATCH (left) and the
+## day / wins counter (centre); the leaderboard sits below the row. A leaderboard dragged up into that spot
+## (it can be moved anywhere): the icon docks on its left instead, never under it.
+const CHAT_ICON_RIGHT := 110.0
+func chat_icon_pos() -> Vector2:
+	var vp := get_viewport().get_visible_rect().size
+	var p := Vector2(floorf(vp.x - CHAT_ICON_RIGHT - chat_btn_game.size.x - 4.0), 1.0)
+	var br: Rect2 = board_ui.get_global_rect() if board_ui != null and board_ui.visible else Rect2()
+	if br.has_area() and Rect2(p, chat_btn_game.size).grow(2.0).intersects(br):
+		p = Vector2(maxf(0.0, br.position.x - chat_btn_game.size.x - 4.0), br.position.y)
+	return p
+
+
+## Room chat (0.7.0): the window over everything, every line of this room session, NEW cleared.
+func open_chat() -> void:
+	chat_window.me = transport.self_id if transport != null else 0
+	chat_window.show_lines(client.chat)
+	chat_window.visible = true
+	chat_window.move_to_front()
+	chat_window.reset_size()
+	chat_window.position = ((get_viewport().get_visible_rect().size - chat_window.size) * 0.5).floor()
+	_set_chat_unread(false)
+	chat_window.input.grab_focus.call_deferred()
+
+
+func _on_chat_line(e: Dictionary) -> void:
+	if chat_window.visible:
+		chat_window.add_line(e)
+	elif int(e.id) != (transport.self_id if transport != null else 0):
+		_set_chat_unread(true)                          # (my own line never counts as new)
+
+
+## Left the room: its chat is gone (the client dropped the lines): no window, no NEW.
+func _on_chat_cleared() -> void:
+	chat_window.visible = false
+	chat_window.show_lines([])
+	_set_chat_unread(false)
+
+
+func _set_chat_unread(on: bool) -> void:
+	chat_unread = on
+	for b in [chat_btn_game, panel.chat_btn]:
+		if b != null:
+			ChatWindow.badge(b, on)
+
+
+## Host setting "banned_trainers" (0.7.0, trainer_ban.gd): this lobby run's banned trainer ids.
+func banned_trainers() -> Array:
+	return TrainerBan.banned_of(client.state.settings) if client != null and lobby_run_live() else []
+
+
+## Random 3 with bans, before the game's screen enters: its 3 offers (the run's pending offers, which the
+## game shows as they are) drawn from the unbanned trainers. Offers already pending (a reload) stay unless
+## one of them is banned.
+func _offer_unbanned() -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	var bans := banned_trainers()
+	var pend: Array = rm.data.pending_trainer_options
+	if pend.is_empty() or pend.any(func(id): return str(id) in bans):
+		rm.data.pending_trainer_options = TrainerBan.offers(str(rm.data.active_set_id), bans,
+			UserManager.get_recent_trainer_offers(bool(rm.data.is_ranked)))
 
 
 ## Host setting "free_trainers" (0.6.9): this lobby run picks its trainer from the whole roster.
@@ -1791,6 +1928,10 @@ func _process(_delta: float) -> void:
 	_update_hub()
 	if broadcast != null:
 		broadcast.update()
+	if chat_btn_game != null and client != null:
+		chat_btn_game.visible = client.in_match() and not panel.visible and not on_title_screen()
+		if chat_btn_game.visible:
+			chat_btn_game.position = chat_icon_pos()
 	if next_bar != null and client != null:
 		next_bar.update(client.in_match() and client.phase in ["shop", "ready_wait"] and _in_shop() and not is_out())
 		if next_bar.visible:
@@ -1857,6 +1998,117 @@ func _watch_shop() -> void:
 	client.at_shop(r)
 
 
+## Tier 4 Apprentice (0.7.0): the first roll of each of the next LUCK_SHOPS shops (from the event's Day) may
+## put a Mythic monster in a monster slot and, rolled apart, a Mythic item in the item slot (LUCK_CHANCE each,
+## seeded by the room seed + round). After the game's own roll (deferred), then the shop is shown again.
+func _on_shop_rolled(_items, _anim, m) -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	if not lobby_run_live() or rm == null or rm.data == null:
+		return
+	_t4_shelf.call_deferred(m)
+	var luck = rm.data.blackboard.get(Tier4.LUCK_KEY)
+	var r := int(rm.data.current_round)
+	if not (luck is Dictionary) or int(luck.get("left", 0)) <= 0 or r < int(luck.get("day", 0)) or r <= int(luck.get("done", 0)):
+		return
+	luck["done"] = r
+	luck["left"] = int(luck.left) - 1
+	_apply_luck.call_deferred(m, r, int(luck.get("seed", 0)))
+
+
+## Tier 4 shop choices (0.7.0), after every roll / buy of the player's own shop (idempotent: each shelf
+## entry carries a mark of what was done to it):
+##   VOUCHER_KEY  free items (Bottled Light, Arcane Surplus): the item slot holds the next one at 0 gold
+##                until it is bought (a reroll brings it back)
+##   FREE_KEY     Mercenary Contract: monsters cost 0 until that many were bought
+##   HALF_KEY     Time Dilation: the shop of that Day sells monsters and the item at half price
+func _t4_shelf(m) -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	if not is_instance_valid(m) or rm == null or rm.data == null:
+		return
+	var run = rm.data
+	var changed := false
+	var free_left := int(run.blackboard.get(Tier4.FREE_KEY, 0))
+	var half: bool = int(run.blackboard.get(Tier4.HALF_KEY, -1)) == int(run.current_round)
+	for i in m.current_shop_items.size():
+		var c = m.current_shop_items[i]
+		if c is MonsterInstance:
+			var want := 0                                  # this entry's Tier 4 discount (gold, <= 0)
+			if free_left > 0:
+				want = -(c.get_gold_cost() - int(c.blackboard.get(Tier4.SHELF_MARK, 0)))
+			elif half:
+				want = -ceili((c.get_gold_cost() - int(c.blackboard.get(Tier4.SHELF_MARK, 0))) / 2.0)
+			var had := int(c.blackboard.get(Tier4.SHELF_MARK, 0))
+			if want != had:
+				c.blackboard["shop_pending_discount"] = int(c.blackboard.get("shop_pending_discount", 0)) - had + want
+				c.blackboard[Tier4.SHELF_MARK] = want
+				changed = true
+	var vouchers: Array = run.blackboard.get(Tier4.VOUCHER_KEY, [])
+	if m.current_shop_items.size() > m.MONSTER_SLOTS:
+		var slot = m.current_shop_items[m.MONSTER_SLOTS]
+		var marked: bool = slot is ItemData and slot.has_meta(Tier4.SHELF_MARK)
+		if not vouchers.is_empty() and not (marked and str(slot.id) == str(vouchers[0])):
+			var it = GameDatabase.get_item_by_id(str(vouchers[0]))
+			if it != null:
+				var free = it.duplicate()
+				free.cost = 0
+				free.set_meta(Tier4.SHELF_MARK, "voucher")
+				m.current_shop_items[m.MONSTER_SLOTS] = free
+				changed = true
+		elif vouchers.is_empty() and half and slot is ItemData and not marked:
+			var priced = slot.duplicate()
+			priced.cost = int(slot.cost) / 2
+			priced.set_meta(Tier4.SHELF_MARK, "half")
+			m.current_shop_items[m.MONSTER_SLOTS] = priced
+			changed = true
+	if changed:
+		m.shop_updated.emit(m.current_shop_items, false)     # re-enters here: nothing left to change
+
+
+## A bought shelf entry: a free item / free monster used up.
+func _on_shop_bought(index: int, m) -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	if not lobby_run_live() or rm == null or rm.data == null or index < 0 or index >= m.current_shop_items.size():
+		return
+	var c = m.current_shop_items[index]
+	if c is ItemData and str(c.get_meta(Tier4.SHELF_MARK, "")) == "voucher":
+		var vouchers: Array = rm.data.blackboard.get(Tier4.VOUCHER_KEY, []).duplicate()
+		vouchers.erase(str(c.id))
+		rm.data.blackboard[Tier4.VOUCHER_KEY] = vouchers
+	elif c is MonsterInstance and int(c.blackboard.get(Tier4.SHELF_MARK, 0)) < 0:
+		c.blackboard.erase(Tier4.SHELF_MARK)
+		var left := int(rm.data.blackboard.get(Tier4.FREE_KEY, 0))
+		if left > 0:
+			rm.data.blackboard[Tier4.FREE_KEY] = left - 1
+
+
+func _apply_luck(m, r: int, seed_n: int) -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	if not is_instance_valid(m) or rm == null or rm.data == null:
+		return
+	var run = rm.data
+	var rng := Tier4.rng_for(seed_n, r, "luck")
+	var got := [r, "", ""]
+	if rng.randf() < Tier4.LUCK_CHANCE:
+		var pool: Array = Comeback.species_of_tier(run, Tier4.MYTHIC_TIER)
+		var slot: int = m._find_mythical_slot(true) if not pool.is_empty() else -1
+		if slot >= 0:
+			got[1] = str(pool[rng.randi() % pool.size()].id)
+			m._place_mythical_at_slot(slot, got[1])
+	if rng.randf() < Tier4.LUCK_CHANCE and m.current_shop_items.size() > m.MONSTER_SLOTS:
+		var items: Array = GameDatabase.items_db.filter(func(it): return int(it.tier) == Tier4.MYTHIC_TIER and it.can_appear_in_shop(run))
+		items.sort_custom(func(a, b): return str(a.id) < str(b.id))
+		if not items.is_empty():
+			var it = items[rng.randi() % items.size()]
+			got[2] = str(it.id)
+			m.current_shop_items[m.MONSTER_SLOTS] = m._price_shop_item(it)
+	luck_rolls.append(got)
+	if got[1] != "" or got[2] != "":
+		m._request_auto_save()
+		m.shop_updated.emit(m.current_shop_items, false)
+		_status("Apprentice luck: %s in your shop!" % " and ".join([got[1], got[2]].filter(func(x): return x != "").map(
+			func(x): return str(GameDatabase.get_species_by_id(x).name) if GameDatabase.get_species_by_id(x) != null else str(GameDatabase.get_item_by_id(x).name))))
+
+
 ## A lobby run restored with the comeback event still pending (crash rejoin): the event lives only
 ## in memory (GameDatabase.events_map), so register it again before the game's event screen asks.
 func _keep_comeback() -> void:
@@ -1865,6 +2117,9 @@ func _keep_comeback() -> void:
 	var rm = get_node_or_null("/root/RunManager")
 	if str(rm.data.pending_event_id) == Comeback.ID and GameDatabase.get_event_by_id(Comeback.ID) == null:
 		Comeback.ensure(rm.data)
+	for id in [str(rm.data.pending_event_id), str(rm.data.queued_event_id)]:
+		if Tier4.is_id(id) and GameDatabase.get_event_by_id(id) == null:
+			Tier4.ensure(rm.data, id)                  # a Tier 4 event (pending, or queued after the comeback)
 
 
 ## My battle is over on my screen and the game moved on to a post-battle screen (the comeback event, a
@@ -1904,7 +2159,8 @@ func _comeback_tick() -> void:
 ## One frame of the comeback screen for the game state `st` (the harness passes the real event scene).
 func comeback_step(st) -> void:
 	var path: String = str(st.get_script().resource_path) if st != null and st.get_script() != null else ""
-	var on: bool = lobby_run_live() and client != null and client.in_match() and path == EVENT_STATE 		and st.get("current_event_data") != null and str(st.current_event_data.id) == Comeback.ID
+	var ev_id: String = str(st.current_event_data.id) if path == EVENT_STATE and st.get("current_event_data") != null else ""
+	var on: bool = lobby_run_live() and client != null and client.in_match() and (ev_id == Comeback.ID or Tier4.is_id(ev_id))
 	if not on:
 		_comeback_since = -1.0
 		_comeback_screen = null
@@ -1928,6 +2184,9 @@ func comeback_step(st) -> void:
 			comeback_panel.set_target(st.get("selected_target_monster"))
 	elif comeback_panel.visible and picked:
 		comeback_panel.close()
+	if ev_id != Comeback.ID:
+		comeback_timer.visible = false                 # Tier 4: no countdown (like the game's own events)
+		return
 	var left := _comeback_seconds() - (now - _comeback_since)
 	comeback_timer.visible = not picked
 	comeback_timer.text = "Choose: %d:%02d  ·  auto-pick: Rally Supplies" % [int(ceilf(maxf(left, 0.0))) / 60, int(ceilf(maxf(left, 0.0))) % 60]

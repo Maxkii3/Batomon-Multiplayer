@@ -165,7 +165,7 @@ func refresh() -> void:
 						b.add_theme_color_override("font_hover_color", tt.text_color)
 						b.add_theme_color_override("font_outline_color", UiTheme.DARK)
 						b.add_theme_constant_override("outline_size", 3)
-		"draft":
+		"draft", "recruit", "reserve", "immortal":
 			if mode == "confirm":
 				for c in option.cands:
 					var id := str(c.id)
@@ -176,6 +176,13 @@ func refresh() -> void:
 				for id in load("res://batomulti/comeback.gd").reforge_candidates(run, target):
 					_unit_choice(str(id), option.species_name(str(id)), str(option.choice) == str(id) and str(option.choice_key) == key,
 						_pick_reforge.bind(str(id), key))
+	if mode == "confirm" and option.has_method("pick_kind"):     # Tier 4: tick board units / held trinkets
+		for i in option.pick_choices(run):
+			if option.pick_kind() == "unit":
+				var m = run.team[i]
+				_unit_choice(str(m.data.id), "%s\nLv%d" % [m.data.name, m.level], int(i) in option.picks, _pick_forge.bind(int(i)), str(i))
+			else:
+				_choice(option.trinket_name(str(run.trinket_ids[i])), str(i), int(i) in option.picks, _pick_forge.bind(int(i)))
 	_choices.visible = not choice_buttons.is_empty()
 	_dim.visible = mode == "confirm"
 	_buttons.visible = mode == "confirm"
@@ -198,6 +205,13 @@ func _pick_draft(id: String) -> void:
 	refresh()
 
 
+func _pick_forge(i: int) -> void:
+	if option == null:
+		return
+	option.toggle_pick(i)
+	refresh()
+
+
 func _pick_reforge(id: String, key: String) -> void:
 	if option == null:
 		return
@@ -215,6 +229,10 @@ func _next_step() -> String:
 			return "Next: choose a bench unit, then 1 of 3 species."
 		"draft":
 			return "Next: choose the bench unit to sell."
+		"recruit":
+			return "Next: choose the board unit to release."
+		"ascend", "chrono", "overdrive", "focus":
+			return "Next: choose the board unit."
 	return ""
 
 
@@ -229,8 +247,8 @@ func _choice(text: String, value: String, on: bool, cb: Callable) -> Button:
 ## A unit card (Draft / Reforge): the species' own sprite (the game's dex picture) with its name (+ role).
 ## Confirm dialog: picture above the text, three even cards in a row. Side panel (next to the game's picker):
 ## one compact row per species, picture left of the name, so the narrow column stays clear of the picker.
-func _unit_choice(id: String, text: String, on: bool, cb: Callable) -> Button:
-	var b := _choice(text, id, on, cb)
+func _unit_choice(id: String, text: String, on: bool, cb: Callable, value := "") -> Button:
+	var b := _choice(text, value if value != "" else id, on, cb)
 	var db = Engine.get_main_loop().root.get_node_or_null("GameDatabase")
 	var s = db.get_species_by_id(id) if db != null else null
 	if s != null and s.texture != null:

@@ -317,6 +317,9 @@ func _render_chest(ch: Dictionary) -> void:
 		chest_key = ck
 		chest_stage = ""
 		chest_pick = ""
+		# the previous box's "cards appear when present_open ends" must not carry over: it fired after this
+		# box's drop and showed it open while the player had not opened it (live 2026-10-24, Day 19)
+		_chest_show_pending = false
 		var opts: Array = []
 		for id in ch.get("options", []):
 			var td = GameDatabase.get_trinket_by_id(str(id))

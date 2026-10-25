@@ -40,6 +40,8 @@ const COL_NEXT := Color(UiTheme.RED, 0.20)        # my next opponent's row
 const COL_HOVER := Color(UiTheme.HEADER_YELLOW, 0.28)
 const COL_HEART := UiTheme.RED
 const COL_READY := Color("#2f9e44")
+const COL_SHOPPING := UiTheme.YELLOW_DARK          # still in the shop: the room waits for this player
+const CHECK_W := 8.0                               # the drawn check mark before "ready" (the pixel font has no ✓)
 const COL_SWORDS := UiTheme.RED_DARK
 ## the game's own lives icons (lives_icons.gd): the heart, and the broken one of a run on its Second Chance
 const ICON_HEART := "res://assets/ui/textures/shop/lives_icon.png"
@@ -165,8 +167,8 @@ static func status_text(seat: Dictionary, phase: String) -> String:
 			return "LEFT"
 	if not bool(seat.get("connected", true)):
 		return "OFFLINE"                         # dropped: its seat waits for a rejoin (protocol 8 wording, was "DC")
-	if phase == "shop" and bool(seat.get("ready", false)):
-		return "ready"
+	if phase == "shop":                          # the ROOM's phase: shown the same to players, waiters and spectators
+		return "ready" if bool(seat.get("ready", false)) else "shopping"
 	if phase == "battle":
 		return "fighting"
 	return ""
@@ -265,10 +267,21 @@ func _draw_rows() -> void:
 		_heart(ci, Vector2(sx, y), heart_kind(seat), out)
 		_text(ci, Vector2(sx + HEART_COL_W, y), "%d" % int(seat.lives), COL_OUT if out else COL_HEART, 26 - HEART_COL_W + 10)
 		_text(ci, Vector2(sx + 30, y), "W%d" % int(seat.wins), col, 24)
-		var st := status_text(seat, client.phase)
-		_text(ci, Vector2(sx + 54, y), st, COL_READY if st == "ready" else (UiTheme.RED if st == "OFFLINE" else COL_DIM), STATS_W - 58, HORIZONTAL_ALIGNMENT_RIGHT)
+		# room phase, not my own: after my Battle! (ready_wait) I still see who the room is waiting for (0.7.0)
+		var st := status_text(seat, str(client.state.phase))
+		var st_col: Color = {"ready": COL_READY, "shopping": COL_SHOPPING, "OFFLINE": UiTheme.RED}.get(st, COL_DIM)
+		_text(ci, Vector2(sx + 54, y), st, st_col, STATS_W - 58, HORIZONTAL_ALIGNMENT_RIGHT)
+		if st == "ready":
+			check(ci, Rect2(sx + STATS_W - 4 - _text_w(st) - CHECK_W - 2, y + 4, CHECK_W, ROW_H - 8), COL_READY)
 		y += ROW_H
 		i += 1
+
+
+## A check mark (drawn): "ready" = pressed Battle! and waiting for the round.
+static func check(ci: CanvasItem, r: Rect2, col: Color) -> void:
+	var mid := Vector2(r.position.x + r.size.x * 0.38, r.end.y)
+	ci.draw_line(Vector2(r.position.x, r.position.y + r.size.y * 0.55), mid, col, 2.0)
+	ci.draw_line(mid, Vector2(r.end.x, r.position.y), col, 2.0)
 
 
 ## Crossed swords (drawn: the pixel font has no ⚔): the next-opponent marker.

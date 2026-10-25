@@ -14,7 +14,7 @@ extends RefCounted
 ## decoding uses bytes_to_var, which never decodes objects, plus a per-type schema check. Anything
 ## else is dropped.
 
-const VERSION := 8              # 4: bstart (live spectator time sync) · 5: shopview / shoplive (live shop mirror) · 6: role (player / spectator seats) · 7: watch + shoplive keyframe / delta + lobby patches (big rooms), hello pw + kick + guard (room password, host kick) · 8: lready (lobby Ready check) + back (back to the same room after the match)
+const VERSION := 9              # 9: chat_say / chat_msg (room chat, 0.7.0) · 4: bstart (live spectator time sync) · 5: shopview / shoplive (live shop mirror) · 6: role (player / spectator seats) · 7: watch + shoplive keyframe / delta + lobby patches (big rooms), hello pw + kick + guard (room password, host kick) · 8: lready (lobby Ready check) + back (back to the same room after the match)
 const MAX_BYTES := 512 * 1024
 const CHANNEL := 7
 
@@ -32,6 +32,7 @@ const ROLE := "role"                  # lobby: set seat `id` to "player" / "spec
 const WATCH := "watch"                # spectator: I watch player `id` (0 = nobody); also "send me a keyframe" after a gap
 const LREADY := "lready"              # protocol 8, lobby: my Ready / Not Ready toggle (the host's Start waits for every player)
 const BACK := "back"                  # protocol 8, after game over: seat me in this room's next lobby (results left on my own)
+const SAY := "chat_say"               # protocol 9: my chat line (text only: the host stamps who / when)
 # host -> clients
 const REJECT := "reject"
 const WELCOME := "welcome"            # private: the session token (rejoin / host migration)
@@ -46,10 +47,12 @@ const GAME_OVER := "game_over"
 const SYNC := "sync_full_state"       # authoritative snapshot (rejoin catch-up, confirmed rounds)
 const KICK := "kick"                  # to the kicked member: "You were kicked by the host" (it is banned from the room)
 const GUARD := "guard"                # to the next hosts only: the room password, ban list and password lockouts (migration)
+const CHAT := "chat_msg"              # protocol 9: a chat line to every member (id 0 = a room notice: joined / left)
 const SHOP_LIVE := "shoplive"         # relayed shopview of player `id`: ONLY to the spectators watching `id` (never to alive
                                       # players). base 0 = keyframe (the whole view), else a delta on top of seq `base`
 
-const TO_HOST := [HELLO, AT_SHOP, READY, UNREADY, RESULT, LEAVE, SYNC_REQ, BSTART, SHOP_VIEW, ROLE, WATCH, LREADY, BACK]
+const TO_HOST := [HELLO, AT_SHOP, READY, UNREADY, RESULT, LEAVE, SYNC_REQ, BSTART, SHOP_VIEW, ROLE, WATCH, LREADY, BACK, SAY]
+const CHAT_MAX := 120                 # characters per chat line
 
 ## field -> Variant type, per message type
 const SCHEMA := {
@@ -67,6 +70,8 @@ const SCHEMA := {
 	WATCH: {"id": TYPE_INT},
 	LREADY: {"on": TYPE_BOOL},
 	BACK: {"name": TYPE_STRING},
+	SAY: {"text": TYPE_STRING},
+	CHAT: {"id": TYPE_INT, "name": TYPE_STRING, "text": TYPE_STRING, "at": TYPE_INT},
 	REJECT: {"why": TYPE_STRING},
 	KICK: {"why": TYPE_STRING},
 	GUARD: {"pw": TYPE_STRING, "banned": TYPE_ARRAY, "fails": TYPE_DICTIONARY},
@@ -119,6 +124,17 @@ static func valid_snapshot(snap: Dictionary) -> bool:
 		if not snap.has(k) or typeof(snap[k]) != SNAP_SCHEMA[k]:
 			return false
 	return true
+
+
+# ------------------------------------------------------------ chat
+
+## A chat line as it may travel and show: control characters (new lines, tabs...) -> spaces, trimmed,
+## at most CHAT_MAX characters. "" = nothing to send.
+static func clean_chat(text: String) -> String:
+	var out := ""
+	for ch in text:
+		out += " " if ch.unicode_at(0) < 32 or ch.unicode_at(0) == 127 else ch
+	return out.strip_edges().left(CHAT_MAX).strip_edges()
 
 
 # ------------------------------------------------------------ boards

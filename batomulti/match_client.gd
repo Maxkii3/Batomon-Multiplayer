@@ -41,6 +41,11 @@ signal synced(snap: Dictionary)
 signal eliminated()
 signal shop_live_updated(id: int)
 signal kicked(why: String)
+signal chat_received(entry: Dictionary)   # protocol 9: {id (0 = room notice), name, text, at (unix s)}
+signal chat_cleared()                     # left the room: its chat is gone
+
+const CHAT_KEEP := 100                    # chat lines kept in memory (this room session only)
+var chat: Array = []
 
 var t
 var state = LobbyState.new()
@@ -102,6 +107,24 @@ func _send(type: String, body := {}) -> void:
 		t.send(t.host_id(), P.encode(type, body))
 
 
+## Room chat (protocol 9): my line goes to the host, which stamps it and relays it to every member
+## (me too: my line shows when the room has it). False = nothing to send (empty after cleaning).
+func say(text: String) -> bool:
+	var clean := P.clean_chat(text)
+	if clean == "" or t == null or t.host_id() == 0:
+		return false
+	_send(P.SAY, {"text": clean})
+	return true
+
+
+func _on_chat(b: Dictionary) -> void:
+	var e := {"id": int(b.id), "name": str(b.name), "text": P.clean_chat(str(b.text)), "at": int(b.at)}
+	chat.append(e)
+	if chat.size() > CHAT_KEEP:
+		chat = chat.slice(chat.size() - CHAT_KEEP)
+	chat_received.emit(e)
+
+
 func joined() -> void:
 	if phase == "idle":
 		phase = "lobby"
@@ -123,6 +146,9 @@ func leave() -> void:
 
 ## Back to "not in a room" (left, rejected, or the room went away).
 func reset() -> void:
+	if not chat.is_empty():
+		chat.clear()                                # the room's chat lives as long as this room session, never longer
+		chat_cleared.emit()
 	phase = "idle"
 	round_start_at = {}
 	fight = {}
@@ -270,6 +296,9 @@ func handle(from: int, msg: Dictionary) -> void:
 			_on_game_over(b.winners, b.state)
 		P.SYNC:
 			_on_sync(b.snap)
+		P.CHAT:
+			_on_chat(b)
+			return                                     # chat never touches the match state (no changed)
 		P.SHOP_LIVE:
 			_on_shop_live(b)
 			return                                     # frequent: the views redraw on shop_live_updated

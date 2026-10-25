@@ -309,7 +309,10 @@ func drawn_check() -> Dictionary:
 			if u == null or bool(u.is_dead):
 				out.down += 1
 				continue
-			if str(u.source_monster.data.id) != str(want.data.id):
+			# a unit the game transformed mid-fight (Emberpaw -> Oniclaw on its 20th burn, live 2026-10-24) keeps
+			# the board's species in its revert key: that slot is right, drawn as what it became
+			var was: String = str(u.source_monster.blackboard.get(RunData.BATTLE_TRANSFORM_REVERT_KEY, u.source_monster.data.id))
+			if str(u.source_monster.data.id) != str(want.data.id) and was != str(want.data.id):
 				out.bad.append("t%d s%d: fighting %s, the room's board has %s" % [team, i, u.source_monster.data.id, want.data.id])
 			if v == null or not is_instance_valid(v):
 				out.bad.append("t%d s%d %s: not drawn" % [team, i, want.data.id])

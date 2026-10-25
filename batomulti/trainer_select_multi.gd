@@ -16,6 +16,8 @@ extends "res://game/states/trainer_select_state.gd"
 ## every trainer at the same place; the rows sit in a vanilla-themed ScrollContainer. Nothing touches
 ## the player's offer history or the game's trainer-choice telemetry (an offline lobby run).
 ## The pick stays local: the board every client receives already carries its trainer_id.
+## Bans (0.7.0, trainer_ban.gd): a banned trainer's card stays in its place, greyed with a red X, and
+## can never be picked (mouse, controller or a direct call).
 
 const UiTheme := preload("res://batomulti/ui_theme.gd")
 const COLUMNS := 3
@@ -24,6 +26,7 @@ const STAGGER_CARDS := 6             # the first two rows animate in one by one 
 var free_roster: Array[TrainerData] = []
 var roster_scroll: ScrollContainer
 var roster_grid: GridContainer
+var banned: Array = []               # the room's banned trainer ids (read once, the lobby settings are final)
 
 
 ## Every trainer offerable in this set (the game's own pool rules), sorted by id.
@@ -36,6 +39,8 @@ static func roster(set_id: String) -> Array[TrainerData]:
 func _ready() -> void:
 	super()
 	free_roster = roster(str(RunManager.data.active_set_id) if RunManager.data != null else "")
+	var bm = get_node_or_null("/root/BatoMulti")
+	banned = bm.banned_trainers() if bm != null else []
 	_build_grid()
 
 
@@ -114,6 +119,7 @@ func enter(_data: Dictionary = {}):
 			await get_tree().create_timer(0.15).timeout
 	for t in cards:
 		t.enable()
+	_lock_banned()
 	_cards_ready = true
 	dialogue_box.display_text(tr("dialogue.select_trainer"))
 	if _using_controller:
@@ -126,6 +132,8 @@ func _on_trainer_selected(index: int):
 	if roster_grid == null:
 		await super(index)
 		return
+	if is_banned(index):
+		return                                           # a banned card is never a pick
 	_teardown_hud()
 	RunManager.data.equip_trainer(_trainer_selection[index].id)
 	RunManager.data.pending_trainer_options = []
@@ -142,3 +150,29 @@ func _on_trainer_selected(index: int):
 	transition_anim_player.play("transition_out")
 	await transition_anim_player.animation_finished
 	request_transition("shop")
+
+
+func is_banned(index: int) -> bool:
+	return index >= 0 and index < _trainer_selection.size() and str(_trainer_selection[index].id) in banned
+
+
+## Banned cards: greyed + red X, no mouse, no controller focus. Again after every overlay closes (the
+## game's _set_cards_interactive re-enables every card).
+func _lock_banned() -> void:
+	var cards := trainer_container.get_children()
+	for i in mini(cards.size(), _trainer_selection.size()):
+		if is_banned(i):
+			cards[i].disable()
+			load("res://batomulti/trainer_ban.gd").mark(cards[i], true)
+
+
+func _set_cards_interactive(on: bool) -> void:
+	super(on)
+	if roster_grid != null:
+		_lock_banned()
+
+
+func _enable_controller_navigation() -> void:
+	await super()
+	if roster_grid != null:
+		_lock_banned()
