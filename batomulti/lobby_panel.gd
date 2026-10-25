@@ -1300,7 +1300,10 @@ func _mute_game_keys(on: bool) -> void:
 				continue                  # the field itself needs these
 			_guard_actions[a] = InputMap.action_get_events(a)
 			InputMap.action_erase_events(a)
+		print("BatoMulti: code field has the keyboard: game keys muted")
 	else:
+		if not _guard_actions.is_empty():
+			print("BatoMulti: code field let go: game keys back")
 		for a in _guard_actions:
 			for ev in _guard_actions[a]:
 				if InputMap.has_action(a) and not InputMap.action_has_event(a, ev):

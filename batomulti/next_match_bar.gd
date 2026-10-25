@@ -54,12 +54,20 @@ func setup(p_client, p_transport, p_font: Font, p_size: int) -> void:
 	visible = false
 
 
+## An opponent as the room shows them: their seat (Steam) name, "Name (Ghost)" in a ghost round.
+## Also the battle intro's name (battle_state_multi), so the pill and the fight always agree.
+const GHOST := " (Ghost)"
+
+
+static func vs_label(nm: String, p_ghost: bool) -> String:
+	return nm + (GHOST if p_ghost else "")
+
+
 ## The bar's text ("" = nothing to show).
 func text() -> String:
 	if opp == 0 or client == null:
 		return ""
-	var nm := str(client.state.seats.get(opp, {}).get("name", "?"))
-	return "NEXT MATCH: vs %s%s" % [nm, " (Ghost)" if ghost else ""]
+	return "NEXT MATCH: vs " + vs_label(str(client.state.seats.get(opp, {}).get("name", "?")), ghost)
 
 
 ## Every frame from the glue: visible in the shop phase of an alive player with an announced pairing.
@@ -117,10 +125,16 @@ func _draw() -> void:
 	var ty := floorf((H - font.get_height(font_size)) * 0.5)
 	UiTheme.draw_text(self, font, Vector2(TEXT_X, ty), head, font_size, COL_ACCENT)
 	var hw := font.get_string_size(head + " ", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var rest := text().trim_prefix("NEXT MATCH: ")
-	var room := size.x - TEXT_X - hw - 5.0
+	UiTheme.draw_text(self, font, Vector2(TEXT_X + hw, ty), shown_rest(), font_size, COL_TEXT)
+
+
+## The drawn text after "NEXT MATCH: ", cut to the pill: a long name ends in "...", "(Ghost)" always stays.
+func shown_rest() -> String:
+	var tail := GHOST if ghost else ""
+	var rest := text().trim_prefix("NEXT MATCH: ").trim_suffix(tail)
+	var room := size.x - TEXT_X - 5.0 - font.get_string_size("NEXT MATCH: " + tail, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	if font.get_string_size(rest, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
 		while rest.length() > 1 and font.get_string_size(rest + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
 			rest = rest.left(rest.length() - 1)
 		rest += "..."
-	UiTheme.draw_text(self, font, Vector2(TEXT_X + hw, ty), rest, font_size, COL_TEXT)
+	return rest + tail

@@ -1,3 +1,32 @@
+# BatoMulti 0.7.1 — Real names in the battle intro, What's New
+
+A small update on top of 0.7.0.
+
+**Updating from 0.6.2-0.7.0:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.1: 0.7.0 and 0.7.1 players can't share a room.
+Built and tested on Batomon Showdown **1.4.1**.
+
+## 🐞 Fixes
+
+- **Battle intro names:** the "vs" screen at the start of a room battle showed your opponent's
+  **trainer** (e.g. "Bug Catcher") instead of the player. It now shows their **Steam name**, the same
+  name as NEXT MATCH and the leaderboard. With the game's *Hide usernames* setting on, it still shows
+  trainer names, as in the base game.
+- **Ghost rounds:** when the odd player out fights a copy of someone's board, the intro and NEXT MATCH
+  read **Name (Ghost)**. A long name in the NEXT MATCH pill is shortened before the tag, so **(Ghost)**
+  never disappears. Spectators watching a ghost round see the tag too.
+- **Crash guard:** if one of the game's key hints ever appears while its action has no key bound (the
+  path behind the 0.7.0 crash after a battle), BatoMulti puts the game's default keys back first, so the
+  game keeps running.
+
+## ✨ What's New window
+
+- After an update, the main menu shows **What's New in BatoMulti** with the new version's highlights,
+  once. Press **OK** (or Enter / Esc) and it stays away until the next update.
+- A brand-new install skips it. The version you acknowledged is kept in `batomulti.cfg`.
+
+---
+
 # BatoMulti 0.7.0 — Tier 4 events, Trainer Bans, Room chat
 
 Batomon Showdown, multiplayer: create a room, share the code (or let people find it in the room browser),

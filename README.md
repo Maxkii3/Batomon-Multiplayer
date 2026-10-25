@@ -78,6 +78,10 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/19_match_header.png" alt="The shop's top bar: a compact NEXT MATCH pill, the heart counter, Day 2, the chat bubble with a red pip; the leaderboard shows one player shopping and two ready"><br><sub><b>Cleaner header</b> (0.7.0) — compact, draggable <b>NEXT MATCH</b>, the hearts visible again, the chat bubble (pip = unread), and <b>ready</b> / <b>shopping</b> for every player.</sub></td>
     <td width="50%"><img src="docs/screenshots/20_chat_ingame.png" alt="The Room chat window open in the shop: join notices, three players' lines with times, the input field and Send"><br><sub><b>Chat in the match</b> — names, times, notices; any language; typing never presses the game's hotkeys.</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti v0.7.1 window: four highlights and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
+    <td width="50%"></td>
+  </tr>
 </table>
 
 ---
@@ -105,6 +109,11 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Real names in the battle intro** *(fixed in 0.7.1)* — the "vs" screen shows your opponent's **Steam
+  name**, not their trainer; ghost rounds read **Name (Ghost)** there and in **NEXT MATCH** (a long name is
+  shortened, the (Ghost) tag stays).
+- **What's New** *(new in 0.7.1)* — after an update, the main menu shows the new version's highlights
+  once; **OK** and it stays away until the next update. A first install skips it.
 - **Tier 4 events** *(new in 0.7.0)* — the game's events stop after Day 9; in a room, long matches meet a
   **Tier 4 event** on **Day 12**, **Day 15**, then **every 3 days**: the same event for every player, each
   with **4 choices** and its own banner art (Fusion Altar, Champion's Arrival, Legendary Armory, Awakening
@@ -205,7 +214,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.7.0.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.1.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -224,7 +233,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.7.0-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.1-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -241,8 +250,8 @@ Prefer a zip? Download **`BatoMulti-v0.7.0-ManualInstall.zip`** from the [Releas
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.0 only joins
-0.7.0 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.1 only joins
+0.7.1 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -315,12 +324,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.7.0.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.1.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.7.0.cmd uninstall
-   BatoMulti-Setup-0.7.0.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.7.0.cmd status
+   BatoMulti-Setup-0.7.1.cmd uninstall
+   BatoMulti-Setup-0.7.1.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.1.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

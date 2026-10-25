@@ -274,16 +274,22 @@ func _start_visual_battle(is_replay: bool):
 	if is_replay:
 		_play_replay_sequence()
 		return
-	var p1_name = player_trainer.name
-	var p2_name = enemy_trainer.name
+	var nm := intro_names(player_trainer.name, enemy_trainer.name)
+	_play_intro_sequence(player_trainer, enemy_trainer, nm[0], nm[1])
+
+
+## The intro's [left, right] names: a spectator = the watched pair's seat names; my own fight = the room's
+## seat (Steam) names, "Name (Ghost)" in a ghost round (batomulti.fight_names); the game's Hide usernames
+## setting keeps the trainer names, as in vanilla.
+func intro_names(p1_trainer: String, p2_trainer: String) -> Array:
 	if spectating:
 		var names: Array = bm_fight.get("names", ["", ""])
-		p1_name = str(names[me]) if str(names[me]) != "" else p1_name
-		p2_name = str(names[1 - me]) if str(names[1 - me]) != "" else p2_name
-	elif not SettingsManager.is_hide_usernames_enabled() and UserManager.data and UserManager.data.display_name != "":
-		p1_name = UserManager.data.display_name
-		p2_name = en.display_name if en.display_name != "" else enemy_trainer.name
-	_play_intro_sequence(player_trainer, enemy_trainer, p1_name, p2_name)
+		return [str(names[me]) if str(names[me]) != "" else p1_trainer, str(names[1 - me]) if str(names[1 - me]) != "" else p2_trainer]
+	var b = _bm()
+	if SettingsManager.is_hide_usernames_enabled() or b == null or not b.has_method("fight_names"):
+		return [p1_trainer, p2_trainer]
+	var own: String = UserManager.data.display_name if UserManager.data and UserManager.data.display_name != "" else p1_trainer
+	return b.fight_names(bm_fight, own, p2_trainer)
 
 
 ## Spectator proof (2026-10-06, operator: placeholder foxes on the board): every unit still in the fight

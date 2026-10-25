@@ -15,10 +15,10 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "8f2989030ea0dada7a49a89b232774e514a088755ad4d539aecb617c9aa6ba2b"
+const SELF_SHA256 := "ddb1a4f24dd9855265512145a9ca8d8eaf7133e3a73edbe287732622915efd17"
 const MANIFEST := {
-	"batomulti.gd": "d5d53a0d95e16b29b80766841299964c12c2ef93855a97a5162c9f23573a4725",
-	"battle_state_multi.gd": "6454f78cf52f7cb19da48a920852e44208aa52c156be8a2d76cba4540d9a55a3",
+	"batomulti.gd": "ce90a23b4ba4e317896273b2152902fe661d01e1d534b3143de2c4f2635198ef",
+	"battle_state_multi.gd": "bd6cb562b7c1614ce6db2f905ac174ffe3f8898d997532efc519b5efbe98abc8",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
 	"chat_window.gd": "996c3b38c17961aa3329c508f2c01bb158f96b7d7f98c81d27378e84dd2e968a",
@@ -30,14 +30,14 @@ const MANIFEST := {
 	"event_art.gd": "c377650ce4c2d0d6f1866e15b7e40b6c4697e21b7f1065e6e15b08ad299c9140",
 	"leaderboard.gd": "cc09f7625780663565d09cee1ce27ab61f1817f2535591c4852a141df891e8ce",
 	"life_count_multi.gd": "1070beec33bec431e29a97a8f8e38203e73a2a7a706a0fb238d9b930aaa9e220",
-	"lobby_panel.gd": "ddaeb3aea5d64f347d5b02b2e2b051215cc8ff7601e69e9b4eb8b3e58757065a",
+	"lobby_panel.gd": "98022b0207fb33d6cadc114fcbfff66883315fe61f180af693a277ee50fee15d",
 	"lobby_state.gd": "cf45b63188eb78607c786678dc627f54c6119ffceb67cd26fc9269889ec0572b",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
 	"match_client.gd": "68ca945f4fb1933a330e91f21e03bf2ee6f385e8d2b58512e1b23af3e6b23ef4",
 	"match_host.gd": "4da3e5b1e998a45c3a7df67db6dab4aa14abf8388dad5ecbfaab0e67559b8591",
 	"match_session.gd": "9503bec01709a04b8e399f9f6f55924217ab08434a9c8873a800ee188837f9d0",
 	"mock_transport.gd": "9bd6b10830cf67d7875ebbc57cca2f86fe1a60793224817a9c537b595d13feb5",
-	"next_match_bar.gd": "aed0de7c13fa344b7cd41434a53eceb136a89cdbcffc6b53cf064848dfc13b59",
+	"next_match_bar.gd": "007366ba6828a7df72239ea765b2c6d03c1eebd96df21133026c5f326aa5d55e",
 	"pairing.gd": "0e12a4da2e0af222d27b6ba3f7dcb2be25b9dacf4387f22150272cf790c86625",
 	"protocol.gd": "16a781ccf4a71803972b89dfeab24bbb2c13545feee6686b4c024b0e4e863ecd",
 	"red_coin_multi.gd": "8d2153b41b0a8995bda6f47a7223b30c4edfeba4275a4218d4e22533e0df6eeb",
@@ -56,6 +56,7 @@ const MANIFEST := {
 	"transport.gd": "bc713149cff76d6d19947c367b4ebac8a3bb5932edfa432053c4622e6db2ec42",
 	"ui_theme.gd": "8919f68dab31e82edb97a147332199634d2f5f0d476b98ecb3d5f310b1578e6a",
 	"updater.gd": "16924fee72ff524db0ea402c9da026a2b43282ebb73226d1992285a0c2a4bbb6",
+	"whats_new.gd": "f3a6c5e2feead86160818adf95542201f5b4084696aa1adaee8df8843ea216a0",
 }
 
 

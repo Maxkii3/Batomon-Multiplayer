@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.7.0"
+const VERSION := "0.7.1"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -48,6 +48,7 @@ const NextMatchBar := preload("res://batomulti/next_match_bar.gd")
 const ScoutView := preload("res://batomulti/scout_view.gd")
 const ResultsView := preload("res://batomulti/results_view.gd")
 const Updater := preload("res://batomulti/updater.gd")
+const WhatsNew := preload("res://batomulti/whats_new.gd")
 const Comeback := preload("res://batomulti/comeback.gd")
 const ComebackPanel := preload("res://batomulti/comeback_panel.gd")
 const BattleStateMulti := preload("res://batomulti/battle_state_multi.gd")
@@ -112,6 +113,8 @@ var scout                           # scout_view.gd: another player's last board
 var luck_rolls: Array = []          # tests: Tier 4 Apprentice shops [round, mythic monster, mythic item]
 var results                         # results_view.gd: end-of-match placements + Return to main menu
 var updater                         # updater.gd: GitHub release check + main-menu banner + restart helper
+var whats_new                       # whats_new.gd: the new version's highlights once on the main menu (null = off)
+var _whats_new_shot := ""            # test boot: screenshot of the popup, then its OK is pressed
 var font: Font
 var title_state = null              # the game's title screen while it exists
 var menu_button: Button = null
@@ -155,6 +158,7 @@ var _watch_from_spectating := false  # auto-close when spectating ends (game ove
 var _camera_before: Camera2D = null  # the game's camera before the battle scene took over
 var _canvas_before := Transform2D.IDENTITY
 const BATTLE_SCENE := "res://game/states/battle_state.tscn"
+const KEY_PROMPT := "res://game/ui/common/key_prompt_label.gd"
 var _pending_fight: Dictionary = {} # the lobby fight the next BattleState shows
 var blocker: Control                # full-screen cover: eliminated / waiting for the room / game over
 var blocker_mode := ""              # "" | "waiting" | "eliminated" | "over"
@@ -220,6 +224,7 @@ func _ready() -> void:
 	var coin = GameDatabase.get_item_by_id("red_coin")       # lobby runs: its spent life goes to the host (red_coin_multi.gd)
 	if coin != null:
 		coin.effect_script = RedCoinMulti
+	var returning := FileAccess.file_exists(CFG_PATH)  # used the mod before (What's New after an update)
 	cfg.load(CFG_PATH)
 	font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else ThemeDB.fallback_font
 	layer = CanvasLayer.new()
@@ -348,6 +353,15 @@ func _ready() -> void:
 		if updater.demo_dir != "" and updater.notice != "":
 			updater._demo_notice.call_deferred()
 		updater.check_soon()
+	# tests never see it unless asked (--bm-whats-new): it is modal over the main menu
+	if not bool(ProjectSettings.get_setting("batomulti/allow_mock", false)) or bool(dev_arg("whats-new", false)):
+		whats_new = WhatsNew.new()
+		whats_new.name = "BatoMultiWhatsNew"
+		whats_new.setup(cfg, CFG_PATH, VERSION, returning)
+		layer.add_child(whats_new)                       # above the update banner
+		_whats_new_shot = str(dev_arg("whats-new-shot", ""))
+		if whats_new.pending and updater.notice_good:
+			updater.notice = ""                          # "updated to vX" = the popup's own title
 
 	get_tree().node_added.connect(_on_node_added)
 	for n in get_tree().root.find_children("*", "Node", true, false):
@@ -370,6 +384,21 @@ func _ready() -> void:
 ## The boot-time update check: real installs (cfg [update] check, default on); the test environment
 ## (allow_mock) only with --bm-update-check, so tests and bots never call GitHub. A copy that could not
 ## apply an update anyway (no game pck next to the exe: the harness, the editor) never checks.
+## The main menu itself (its Multiplayer button is up), not the splash before it or the lobby window.
+func main_menu_up() -> bool:
+	return on_title_screen() and not modal.visible and menu_button != null and is_instance_valid(menu_button) \
+		and menu_button.is_visible_in_tree()
+
+
+## Test boot (--bm-whats-new-shot=<png>): the popup as drawn, then its real OK button.
+func _shoot_whats_new(path: String) -> void:
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(path)
+	print("BatoMulti: what's new v%s shown (%s)" % [VERSION, path])
+	whats_new.ok_btn.pressed.emit()
+
+
 func updates_enabled() -> bool:
 	if updater == null or not updater.can_apply():
 		return false
@@ -675,6 +704,8 @@ func _on_node_added(n: Node) -> void:
 	if n is TrinketSelectUI and not (broadcast != null and broadcast.is_ancestor_of(n)):
 		_gift_uis.append(weakref(n))                 # my own gift boxes (not the spectator copy)
 	var s = n.get_script()
+	if s != null and str(s.resource_path) == KEY_PROMPT:
+		keep_key_prompt(str(n.get("action_name")))
 	if s != null and not _pending_fight.is_empty() and BATTLE_SWAPS.has(str(s.resource_path)):
 		swap_script(n, {"state": BattleStateMulti, "view": BattleViewMirror, "director": EffectDirectorMirror,
 			"lives": LifeCountMulti}[BATTLE_SWAPS[str(s.resource_path)]])
@@ -691,6 +722,22 @@ func _on_node_added(n: Node) -> void:
 			_inject_menu.call_deferred(n)
 		else:
 			n.ready.connect(_inject_menu.bind(n), CONNECT_ONE_SHOT)
+
+
+## The game's key hint (key_prompt_label) reads InputMap.action_get_events(a)[0] in its _ready: a keyless
+## action there only logs in a debug build but CRASHES a release build (0.7.0 c0000005; seen again in a
+## 2026-10-26 self-play at a battle -> shop change). Before the hint is ready, a keyless action gets the
+## game's own default keys back (project settings), and the log says which action and why.
+func keep_key_prompt(a: String) -> bool:
+	if a == "" or not InputMap.has_action(a) or not InputMap.action_get_events(a).is_empty():
+		return false
+	var d = ProjectSettings.get_setting("input/" + a, {})
+	for ev in (d.get("events", []) if d is Dictionary else []):
+		InputMap.action_add_event(a, ev)
+	var muted: bool = panel != null and not panel._guard_actions.is_empty()
+	print("BatoMulti: key action '%s' had no keys for the game's hint: %d default key(s) restored (code field mute %s)"
+		% [a, InputMap.action_get_events(a).size(), "on" if muted else "off"])
+	return true
 
 
 ## The game's title screen script or a subclass of it: Mod Loader 1.2.x (Mods/mod_title_state.gd) swaps
@@ -734,13 +781,26 @@ func watch_battle() -> bool:
 	var r := int(v.round)
 	var speed := float(client.state.settings.get("battle_speed", 4.0))
 	_spectate_key = "%d|%d|%d" % [r, int(v.pair[0]), int(v.pair[1])]
-	return watch_boards(b0, b1, r, int(v.pair[2]), side0, canon, [
-		_seat_name(int(v.pair[0])), _seat_name(int(v.pair[1]))], [int(v.pair[0]), int(v.pair[1])],
+	var names := [_seat_name(int(v.pair[0])), _seat_name(int(v.pair[1]))]
+	var o_side := 1 if side0 else 0                   # the watched player's opponent: a ghost in a bye round
+	if names[o_side] != "":
+		names[o_side] = NextMatchBar.vs_label(names[o_side], bool(v.get("bye", false)))
+	return watch_boards(b0, b1, r, int(v.pair[2]), side0, canon, names, [int(v.pair[0]), int(v.pair[1])],
 		func(): return client.live_battle_time(id, r, speed), o)
 
 
 func _seat_name(id: int) -> String:
 	return str(client.state.seats.get(id, {}).get("name", "")) if client != null else ""
+
+
+## Battle intro names of my lobby fight `f` (fight_for: opp, bye): [me, opponent] = the room's seat
+## (Steam) names, a ghost round as "Name (Ghost)"; an unknown seat falls back to the given trainer name.
+## The opponent's RunData comes from to_opponent_dictionary, whose display_name is always "" (player
+## report 2026-10-26: the intro said "vs Bug Catcher").
+func fight_names(f: Dictionary, p1_fallback: String, p2_fallback: String) -> Array:
+	var mine := _seat_name(transport.self_id) if transport != null else ""
+	var theirs := _seat_name(int(f.get("opp", 0)))
+	return [mine if mine != "" else p1_fallback, NextMatchBar.vs_label(theirs if theirs != "" else p2_fallback, bool(f.get("bye", false)))]
 
 
 ## The scene for a pair (side-0 board first, pair seed on side 0). `side0` = the watched player is
@@ -1903,6 +1963,11 @@ func _end_lobby_run() -> void:
 
 func _process(_delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
+	if whats_new != null:
+		whats_new.update(main_menu_up())
+		if whats_new.visible and _whats_new_shot != "":
+			_shoot_whats_new(_whats_new_shot)
+			_whats_new_shot = ""
 	if session != null:
 		session.tick(now)
 	_cancel_button_tick()
