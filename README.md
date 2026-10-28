@@ -109,6 +109,9 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Backpack-style trinket picks** *(new in 0.7.2)* — Reforge, Salvage Master and Master Polish show your
+  trinkets as the game's backpack slots in a scrolling grid (the picked one framed), with the game's
+  details box beside it; Back and Confirm always stay on screen, however big your bag.
 - **Real names in the battle intro** *(fixed in 0.7.1)* — the "vs" screen shows your opponent's **Steam
   name**, not their trainer; ghost rounds read **Name (Ghost)** there and in **NEXT MATCH** (a long name is
   shortened, the (Ghost) tag stays).
@@ -214,7 +217,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.7.1.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.2.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -233,7 +236,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.7.1-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.2-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -250,8 +253,8 @@ Prefer a zip? Download **`BatoMulti-v0.7.1-ManualInstall.zip`** from the [Releas
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.1 only joins
-0.7.1 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.2 only joins
+0.7.2 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -324,12 +327,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.7.1.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.2.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.7.1.cmd uninstall
-   BatoMulti-Setup-0.7.1.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.7.1.cmd status
+   BatoMulti-Setup-0.7.2.cmd uninstall
+   BatoMulti-Setup-0.7.2.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.2.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

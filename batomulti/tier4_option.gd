@@ -327,12 +327,14 @@ func can_target(monster: MonsterInstance) -> bool:
 	return can_shine(monster) if kind == "ascend" else requires_target()
 
 
-## Panel: tick / untick a board unit or held trinket (at most `need`).
+## Panel: tick / untick a board unit or held trinket (at most `need`; a one-pick choice moves the pick).
 func toggle_pick(i: int) -> void:
 	if i in picks:
 		picks.erase(i)
 	elif picks.size() < need:
 		picks.append(i)
+	elif need == 1:
+		picks = [i]
 
 
 ## The units a buff choice reaches.

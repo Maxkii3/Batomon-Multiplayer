@@ -1,3 +1,30 @@
+# BatoMulti 0.7.2 — Backpack-style trinket picks
+
+A small update on top of 0.7.1, from a player report.
+
+**Updating from 0.6.2-0.7.1:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.2: 0.7.1 and 0.7.2 players can't share a room.
+Built and tested on Batomon Showdown **1.4.1**.
+
+## 🐞 Fixes
+
+- **Trinket picks ran off the screen:** the Tier 4 choices that take your own trinkets (**Reforge**,
+  **Salvage Master**, **Master Polish**, Day 12 and later) listed every trinket as a text button. With a
+  big bag the list ran past the bottom of the screen and pushed **Confirm** out of view. The choices now
+  sit in a scrolling area: the title, **Back** and **Confirm** always stay on screen, and every dialog
+  opens at the top of its list.
+
+## ✨ Backpack-style trinket grid
+
+- Your trinkets show as the game's own **backpack slots** (the trinket icons, 5 per row). The picked slot
+  gets a yellow frame, the slot under the mouse a blue one.
+- A **details box** beside the dialog shows the hovered trinket's name, rarity and effect, in the game's
+  own description style; with nothing hovered it shows the trinket you picked. It never covers the grid
+  or the buttons, and **Back** clears it.
+- In one-pick choices (Salvage Master, Master Polish), clicking another slot moves your pick there.
+
+---
+
 # BatoMulti 0.7.1 — Real names in the battle intro, What's New
 
 A small update on top of 0.7.0.

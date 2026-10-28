@@ -23,6 +23,12 @@ const KEY := "seen"
 const WIDTH := 300.0
 ## Highlights per version (newest first in each list). A version without an entry shows no popup.
 const NOTES := {
+	"0.7.2": [
+		"Trinket picks (Reforge, Salvage Master, Master Polish) now show your backpack: a grid of trinket slots, the picked one framed.",
+		"A details box beside the dialog shows the hovered or picked trinket's name, rarity and effect.",
+		"Big bags scroll: the Day 12+ event dialogs keep Back and Confirm on screen. One-pick choices move the pick on a click.",
+		"New in 0.7.1: Steam names in the battle intro and this What's New window.",
+	],
 	"0.7.1": [
 		"The battle intro now shows your opponent's Steam name instead of their trainer.",
 		"Ghost rounds read \"Name (Ghost)\" in NEXT MATCH and the battle intro; a long name is shortened, the (Ghost) tag stays.",

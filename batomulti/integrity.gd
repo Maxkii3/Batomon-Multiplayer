@@ -15,15 +15,15 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "ddb1a4f24dd9855265512145a9ca8d8eaf7133e3a73edbe287732622915efd17"
+const SELF_SHA256 := "93e20c6d581441c0ab3ceb805860e342b59aec411d7ce58fc550fbd4b55ef137"
 const MANIFEST := {
-	"batomulti.gd": "ce90a23b4ba4e317896273b2152902fe661d01e1d534b3143de2c4f2635198ef",
+	"batomulti.gd": "6b1ce50358e1c1b1db68304a7453dabf33a50c3d6732e1001cf6c40217968119",
 	"battle_state_multi.gd": "bd6cb562b7c1614ce6db2f905ac174ffe3f8898d997532efc519b5efbe98abc8",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
 	"chat_window.gd": "996c3b38c17961aa3329c508f2c01bb158f96b7d7f98c81d27378e84dd2e968a",
 	"comeback_option.gd": "dd73027fb0316f2956dca3ecd6215be4cbf170a9d5299073d45a57de5073341b",
-	"comeback_panel.gd": "62be04412a34a67ee90408813a4f8b4b40eda43115accec8249135337041b10c",
+	"comeback_panel.gd": "a632cefac262e2aba65ec5e608b1826e907ece31ae67aada94bf54159e22def8",
 	"comeback.gd": "f07d47cd2418317b65b7f798dc720bb931f821f0dddf09971eb52be47b331345",
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "97c68c3137b57cd22e0ec45d3c1081c63e4529957c0b7c7f7a8dad2e772fdc2b",
@@ -49,14 +49,14 @@ const MANIFEST := {
 	"spectate_broadcast.gd": "b4eec490c7dd13c9c7eab317b0c60c829aa5d0be4191a7e52c481815cdbf2823",
 	"spectator_view.gd": "b703095d80d712e45655cf5f392ad4ad8c9642d5bde1f5a1990da441b703592f",
 	"steam_transport.gd": "b177678f5f3da233e8d2a161f1fe7e66db5b2e0ce20753b578091ad3d13ecca3",
-	"tier4_option.gd": "ac673f4e3777d63832b72f57e399d377e63c0ad30fabf216ffdeaca4fbc2101b",
+	"tier4_option.gd": "248bd5f66e0a59d7043cf7db3fa27bebb4f277c7b20b80f37bf4e2a10d9b1c36",
 	"tier4.gd": "b3f76b9de7f9c6e4a811671c98af0bff014098e05b30a1839ff7846743ba7b22",
 	"trainer_ban.gd": "1481ea9c29627b710afa2df2599f8e2827432d48472c77b80d12aa000ed105c5",
 	"trainer_select_multi.gd": "57411c91e4777541826ba8a1718719f9ae8d15b62736449ba95bb08716848a37",
 	"transport.gd": "bc713149cff76d6d19947c367b4ebac8a3bb5932edfa432053c4622e6db2ec42",
 	"ui_theme.gd": "8919f68dab31e82edb97a147332199634d2f5f0d476b98ecb3d5f310b1578e6a",
 	"updater.gd": "16924fee72ff524db0ea402c9da026a2b43282ebb73226d1992285a0c2a4bbb6",
-	"whats_new.gd": "f3a6c5e2feead86160818adf95542201f5b4084696aa1adaee8df8843ea216a0",
+	"whats_new.gd": "2efd948b80f85a52e1962737c995e84f4ea542907a5d3ff43d09ad314ccc7417",
 }
 
 
