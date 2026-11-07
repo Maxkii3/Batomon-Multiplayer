@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.7.2"
+const VERSION := "0.7.3"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -59,9 +59,12 @@ const TrainerBan := preload("res://batomulti/trainer_ban.gd")
 const ChatWindow := preload("res://batomulti/chat_window.gd")
 const RedCoinMulti := preload("res://batomulti/red_coin_multi.gd")
 const Tier4 := preload("res://batomulti/tier4.gd")
+const SpeciesBan := preload("res://batomulti/species_ban.gd")
+const ShopManagerMulti := preload("res://batomulti/shop_manager_multi.gd")
 const LifeCountMulti := preload("res://batomulti/life_count_multi.gd")
 const TRAINER_SELECT_STATE := "res://game/states/trainer_select_state.gd"
 const SHOP_STATE := "res://game/states/shop_state.gd"
+const SHOP_MANAGER := "res://game/shop/shop_manager.gd"
 ## game script -> BatoMulti subclass, swapped in while a lobby fight is pending (plan.md Phase 1)
 const BATTLE_SWAPS := {
 	"res://game/states/battle_state.gd": "state",
@@ -698,6 +701,9 @@ func _on_node_added(n: Node) -> void:
 	if n is ShopUI and not (broadcast != null and broadcast.is_ancestor_of(n)) and not n.cancel_requested.is_connected(_on_shop_cancel):
 		n.cancel_requested.connect(_on_shop_cancel)  # (runs before shop_state's own handler: re-press is deferred)
 		_shop_cancel_button = weakref(n)
+	if n is ShopManager and not (broadcast != null and broadcast.is_ancestor_of(n)) and not banned_species().is_empty() \
+			and str(n.get_script().resource_path) == SHOP_MANAGER:
+		swap_script(n, ShopManagerMulti)             # the room's Batomon bans: a banned unit never comes from a roll
 	if n is ShopManager and not (broadcast != null and broadcast.is_ancestor_of(n)) and not n.shop_updated.is_connected(_on_shop_rolled):
 		n.shop_updated.connect(_on_shop_rolled.bind(n))   # Tier 4: Mythic luck, free items, free / half-price buys
 		n.item_bought.connect(_on_shop_bought.bind(n))
@@ -1782,6 +1788,11 @@ func _set_chat_unread(on: bool) -> void:
 ## Host setting "banned_trainers" (0.7.0, trainer_ban.gd): this lobby run's banned trainer ids.
 func banned_trainers() -> Array:
 	return TrainerBan.banned_of(client.state.settings) if client != null and lobby_run_live() else []
+
+
+## Host setting "banned_species" (species_ban.gd): this lobby run's banned shop units.
+func banned_species() -> Array:
+	return SpeciesBan.banned_of(client.state.settings) if client != null and lobby_run_live() else []
 
 
 ## Random 3 with bans, before the game's screen enters: its 3 offers (the run's pending offers, which the

@@ -1,3 +1,44 @@
+# BatoMulti 0.7.3 — Batomon Showdown 1.5.0 update, Mixed region, Batomon Ban
+
+An update for the Batomon Showdown **1.5.0** patch (2026-11-07), plus two new host settings.
+
+**Updating from 0.6.2-0.7.2:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.3: 0.7.2 and 0.7.3 players can't share a room.
+Built and tested on Batomon Showdown **1.5.0**.
+
+## 🐞 Batomon Showdown 1.5.0 compatibility
+
+- **Gift trinkets:** 1.5.0 changed how a gift pick is confirmed: the game now reports a second, stolen
+  trinket (the new **Burglar**) and shows it on its own card with **Confirm**. BatoMulti's run layer now
+  passes that result through exactly like the game, so gift picks (also the Burglar's stolen trinket)
+  work in single-player and in rooms.
+- **Room battles** now wait until the battle result is saved before leaving the battle screen, the same
+  safety the game added in 1.5.0 (at x4-x8 speed a battle could end before its result was saved).
+
+## ✨ Mixed region
+
+- The host's Region **All** is now called **Mixed**: every region's Batomon in one shop pool.
+- In **Mixed** (and in any room with Batomon bans) the game's scripted first-run shop shelves are off, so
+  everyone gets normal shops.
+
+## ✨ Batomon Ban (host)
+
+- A new **Ban Batomon** button in the Trainers row opens a ban window with every Batomon of the room's
+  region that a shop can roll (Common to Legendary), sorted by rarity, with their pictures and rarity
+  tabs. Each rarity always keeps a few unbanned Batomon.
+- **Live search:** type a name and the list filters as you type; small typos are forgiven and
+  **suggestions** appear under the field (click one or press Enter). **Clear all** removes every ban.
+- Banned Batomon never appear in **shop rolls**. Events, drops and items can still give them, on purpose.
+- Guests see the host's list read-only; the row shows **None** or **(n) Banned**.
+- Bans are picked by hand: there is no "Community picks" preset list.
+
+## 🎨 Clean white theme
+
+- The **Batomon Ban**, **Trainer Ban** and the comeback / Tier 4 trinket and event pick dialogs use a
+  clean off-white theme.
+
+---
+
 # BatoMulti 0.7.2 — Backpack-style trinket picks
 
 A small update on top of 0.7.1, from a player report.

@@ -29,6 +29,7 @@ const KICK_CONFIRM := 3.0          # s the "Sure?" step of a Kick button stays a
 const MAX_LIVES := 999             # 0.7.0: room lives uncapped in practice (the game's own run starts with 10)
 const UiTheme := preload("res://batomulti/ui_theme.gd")
 const TrainerBan := preload("res://batomulti/trainer_ban.gd")
+const SpeciesBan := preload("res://batomulti/species_ban.gd")
 const ChatWindow := preload("res://batomulti/chat_window.gd")
 const SPEEDS := [1.0, 2.0, 4.0, 6.0, 8.0]   # host battle speed choices (every client plays battles at it)
 const COPIED_SECONDS := 1.5
@@ -76,6 +77,10 @@ var ban_btn: Button                # 0.7.0: opens the trainer ban window (host: 
 var ban_label: Label               # "None" / "(n) Banned", live for every member
 var ban_window: TrainerBan         # built on first open
 var _bans: Array = []              # the room's banned trainer ids (the host's own; guests: the room's)
+var species_ban_btn: Button        # opens the Batomon ban window (host: edit, everyone else: look)
+var species_ban_label: Label       # "None" / "(n) Banned", live for every member
+var species_ban_window: SpeciesBan # built on first open
+var _species_bans: Array = []      # the room's banned species ids (the host's own; guests: the room's)
 var region_buttons: Array = []     # 0.6.11: [All, then the game's regions (Pantra, Jinto)]; region_ids[i] = its set id
 var region_ids: Array = []
 var _set_id: String = LobbyState.DEFAULT_SETTINGS.set_id
@@ -384,20 +389,27 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	ban_label = _label(TrainerBan.status_text(_bans), "BmDim")
 	ban_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	trainer_row.add_child(ban_label)
+	trainer_row.add_child(_label(" ", ""))
+	species_ban_btn = _button("Ban Batomon", func(): open_species_bans())
+	species_ban_btn.tooltip_text = "Units no shop roll gives in this match; events and drops still can (the host chooses; everyone can look)"
+	trainer_row.add_child(species_ban_btn)
+	species_ban_label = _label(SpeciesBan.status_text(_species_bans, _set_id), "BmDim")
+	species_ban_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	trainer_row.add_child(species_ban_label)
 	vb.add_child(trainer_row)
 	_style_trainers()
 	var region_row := HBoxContainer.new()
 	region_row.add_theme_constant_override("separation", 3)
 	region_row.add_child(_label("Region", ""))
 	region_ids = [""]
-	var region_names := ["All"]
+	var region_names := ["Mixed"]
 	for sd in GameDatabase.get_picker_sets():
 		region_ids.append(str(sd.id))
 		region_names.append(sd.name)
 	for i in region_ids.size():
 		var id: String = region_ids[i]
 		var rb := _button(region_names[i], func(): _pick_region(id))
-		rb.tooltip_text = "Units, trainers, trinkets and events from every region" if id == "" \
+		rb.tooltip_text = "Every region merged: all their units, trainers, trinkets and events. Shop rarity odds stay the game's" if id == "" \
 			else "Only %s: its units, trainers, trinkets and events" % region_names[i]
 		region_buttons.append(rb)
 		region_row.add_child(rb)
@@ -486,7 +498,7 @@ func settings() -> Dictionary:
 	return {"shop_seconds": _minutes.value * 60.0, "lives": int(_lives.value),
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
 		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers, "set_id": _set_id,
-		"banned_trainers": _bans.duplicate(),
+		"banned_trainers": _bans.duplicate(), "banned_species": _species_bans.duplicate(),
 		"sync_events": _sync_events,
 		"max_players": int(max_players_spin.value), "max_spectators": int(max_specs_spin.value),
 		"room_name": RoomInfo.clean_name(name_edit.text), "password": pw_edit.text.strip_edges()}
@@ -516,6 +528,8 @@ func _pick_region(id: String) -> void:
 	_set_id = id
 	_bans = TrainerBan.keep_playable(_bans, id)        # a smaller region still leaves 3 unbanned trainers
 	_refresh_bans(true)
+	_species_bans = SpeciesBan.keep_playable(_species_bans, id)
+	_refresh_species_bans(true)
 	_style_regions()
 	_push_settings()
 
@@ -580,6 +594,48 @@ func _refresh_bans(editable: bool) -> void:
 		return t.name if t != null else id)) if not _bans.is_empty() else "No trainer is banned"
 	if ban_window != null and ban_window.visible:
 		ban_window.show_bans(_set_id, _bans, editable)
+
+
+## The Batomon ban window (built on first use) over the panel, centred on the screen.
+func open_species_bans() -> void:
+	if species_ban_window == null:
+		species_ban_window = SpeciesBan.new()
+		species_ban_window.top_level = true
+		species_ban_window.visible = false
+		species_ban_window.toggled.connect(_on_species_ban_toggled)
+		species_ban_window.clear_pressed.connect(func(): _set_species_bans([]))
+		species_ban_window.search.focus_entered.connect(_mute_game_keys.bind(true))
+		species_ban_window.search.focus_exited.connect(_mute_game_keys.bind(false))
+		add_child(species_ban_window)
+	species_ban_window.visible = true
+	refresh()
+	species_ban_window.reset_size()
+	species_ban_window.position = ((get_viewport_rect().size - species_ban_window.size) * 0.5).floor()
+
+
+## Host only (the window is read-only otherwise): toggle, then the room gets it like every host setting.
+func _on_species_ban_toggled(id: String) -> void:
+	var after := SpeciesBan.toggle(_species_bans, id, _set_id)
+	if after == _species_bans:
+		species_ban_window.say("At least %d units of each rarity must stay" % SpeciesBan.MIN_LEFT)
+		return
+	_set_species_bans(after)
+
+
+func _set_species_bans(bans: Array) -> void:
+	_species_bans = bans
+	_refresh_species_bans(true)
+	_push_settings()
+
+
+## The "None" / "(n) Banned" label (names in its tooltip) and the open window.
+func _refresh_species_bans(editable: bool) -> void:
+	var shown := SpeciesBan.in_region(_species_bans, _set_id)
+	species_ban_label.text = SpeciesBan.status_text(_species_bans, _set_id)
+	species_ban_label.tooltip_text = "Banned from the shop: " + ", ".join(shown.map(func(id):
+		return str(GameDatabase.get_species_by_id(id).name))) if not shown.is_empty() else "No Batomon is banned"
+	if species_ban_window != null and species_ban_window.visible:
+		species_ban_window.show_bans(_set_id, _species_bans, editable)
 
 
 ## The code to share: the room's code in a room, else the (valid) code typed in the field.
@@ -735,6 +791,9 @@ func refresh() -> void:
 	if speed_locked and hub.client != null:
 		_bans = TrainerBan.banned_of(hub.client.state.settings)   # guests (and everyone in a match) see the room's list
 	_refresh_bans(not speed_locked)
+	if speed_locked and hub.client != null:
+		_species_bans = SpeciesBan.banned_of(hub.client.state.settings)   # guests (and everyone in a match) see the room's list
+	_refresh_species_bans(not speed_locked)
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:

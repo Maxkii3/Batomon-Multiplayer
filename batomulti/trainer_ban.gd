@@ -135,7 +135,7 @@ static func is_marked(c: Control) -> bool:
 
 func _init() -> void:
 	theme = UiTheme.get_theme()
-	theme_type_variation = "BmDialog"
+	theme_type_variation = "BmSheet"
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 4)
@@ -156,7 +156,7 @@ func _init() -> void:
 	head.add_child(close_btn)
 	vb.add_child(head)
 	note = Label.new()
-	note.theme_type_variation = "BmDim"
+	note.add_theme_color_override("font_color", UiTheme.TEXT)
 	vb.add_child(note)
 	var scroll := UiTheme.scroll_box()
 	scroll.custom_minimum_size = Vector2(COLUMNS * (PORTRAIT.x + 8.0) + 12.0, 2.6 * (PORTRAIT.y + 22.0))
@@ -190,6 +190,7 @@ func _build(set_id: String) -> void:
 	for t in TrainerSelectMulti.roster(set_id):
 		var id := str(t.id)
 		var b := Button.new()
+		b.theme_type_variation = "BmTile"
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = PORTRAIT + Vector2(6, 22)
 		b.pressed.connect(func(): if editable: toggled.emit(id))   # read-only for guests: the tile looks the same

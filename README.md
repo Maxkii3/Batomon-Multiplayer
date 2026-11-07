@@ -18,7 +18,7 @@ tournament tools, no restarts between rounds — just share the room code.
 [Play with friends](#-how-to-play-with-friends) ·
 [Report a bug](https://github.com/Maxkii3/Batomon-Multiplayer/issues)
 
-Requires Batomon Showdown on **Steam for Windows** (built and tested on game **1.4.1**). Everyone playing
+Requires Batomon Showdown on **Steam for Windows** (built and tested on game **1.5.0**). Everyone playing
 needs the same BatoMulti version and Steam running. This is a community mod, not an official multiplayer update.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
@@ -43,7 +43,7 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/06_lobby_browser.png" alt="The Browse rooms tab: room name, host, players, spectators, status, speed, code and a lock on password rooms"><br><sub><b>Room browser</b> — find a public room: name, host, players, spectators, status and speed; 🔒 = password.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab: room code and Copy next to the tabs, host settings beside the member list, and the bottom action bar with Leave room, the ready count, Force Start and Start match"><br><sub><b>Your room</b> — room code + <b>Copy</b> up top, host settings beside the member list (<b>Player / Spectator</b>, <b>Kick</b>), and one action bar: <b>Leave room</b> · who's ready · <b>Force Start</b> + <b>Start match</b>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab: room code, Copy and Chat up top, host settings (Trainers row with Ban Trainer and Ban Batomon (3) Banned, Region Mixed lit) beside the member list, and the bottom action bar with Leave room, the ready count, Force Start and Start match"><br><sub><b>Your room</b> — room code + <b>Copy</b> up top, host settings beside the member list (<b>Player / Spectator</b>, <b>Kick</b>), and one action bar: <b>Leave room</b> · who's ready · <b>Force Start</b> + <b>Start match</b>.</sub></td>
     <td width="50%"><img src="docs/screenshots/08_shop_overlay.png" alt="The shop with the live leaderboard and the next-opponent bar"><br><sub><b>Shop</b> — the live leaderboard and your <b>next opponent</b> while you build.</sub></td>
   </tr>
   <tr>
@@ -55,32 +55,36 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/07_results.png" alt="The results screen with every player's placement"><br><sub><b>Results</b> — final placements, then back to the menu with one click.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/09_region_host.png" alt="Host settings with the new row: Region All, Pantra, Jinto (Jinto lit) and Events Same for all, Own luck (Same for all lit)"><br><sub><b>Region + Events</b> (0.6.11) — the host picks <b>All</b>, <b>Pantra</b> or <b>Jinto</b>, and <b>Same for all</b> events.</sub></td>
-    <td width="50%"><img src="docs/screenshots/10_region_guest.png" alt="A guest's room panel: the host's settings greyed out, Jinto and Same for all lit"><br><sub><b>Guests</b> see the host's region and event mode (locked), on joining and whenever they change.</sub></td>
+    <td width="50%"><img src="docs/screenshots/09_region_host.png" alt="Host settings: Region Mixed, Pantra, Jinto (Jinto lit) and Events Same for all, Own luck (Same for all lit)"><br><sub><b>Region + Events</b> — the host picks <b>Mixed</b> (every region, 0.7.3), <b>Pantra</b> or <b>Jinto</b>, and <b>Same for all</b> events.</sub></td>
+    <td width="50%"><img src="docs/screenshots/10_region_guest.png" alt="A guest's room panel: the host's settings greyed out, Jinto and Same for all lit, Ready Up! button"><br><sub><b>Guests</b> see the host's region and event mode (locked), on joining and whenever they change.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/11_free_pick.png" alt="Free pick: the game's trainer cards three per row in a scrolling list"><br><sub><b>Free pick</b> — the host can let every player choose any trainer, three per row.</sub></td>
-    <td width="50%"><img src="docs/screenshots/12_comeback_draft.png" alt="Tactical Draft: three unit cards with their pictures, names and Defense / Offense / Support roles"><br><sub><b>Comeback</b> — on your last life, pick a boost such as <b>Tactical Draft</b> (Defense / Offense / Support).</sub></td>
+    <td width="50%"><img src="docs/screenshots/12_comeback_draft.png" alt="Tactical Draft in the off-white dialog: three unit cards with their pictures, names and Defense / Offense / Support roles, Back and Confirm"><br><sub><b>Comeback</b> — on your last life, pick a boost such as <b>Tactical Draft</b> (Defense / Offense / Support), in the clean white dialog (0.7.3).</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/13_tier4_paragon.png" alt="Tier 4 event Paragon: its banner art and four choices, one reading +25% Damage, Shields, Heals and Status DoTs to all units"><br><sub><b>Tier 4 events</b> (0.7.0) — Day 12, 15, then every 3 days: the same event for everyone, <b>4 choices</b>, its own banner.</sub></td>
     <td width="50%"><img src="docs/screenshots/14_tier4_mythic_forge.png" alt="Tier 4 event Mythic Forge with Reforge, Apprentice, Master Polish and Master Smelter (+30% Damage to all units)"><br><sub><b>Mythic Forge</b> — every card says exactly what it boosts (here: <b>+30% Damage</b>).</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/15_trainer_ban_window.png" alt="The Ban Trainer window: trainer portraits, three of them greyed out with a red X"><br><sub><b>Trainer Bans</b> (0.7.0) — the host clicks portraits to ban them (greyed, red X); at least 3 always stay.</sub></td>
-    <td width="50%"><img src="docs/screenshots/16_trainer_ban_row.png" alt="Host settings: the Trainers row with Random 3, Free pick, Ban Trainer and (3) Banned"><br><sub>The room row shows the status: <b>None</b> or <b>(n) Banned</b>; guests see the list read-only.</sub></td>
+    <td width="50%"><img src="docs/screenshots/15_trainer_ban_window.png" alt="The Ban Trainer window in the off-white theme: trainer portraits, three of them greyed out with a red X"><br><sub><b>Trainer Bans</b> (0.7.0) — the host clicks portraits to ban them (greyed, red X); at least 3 always stay.</sub></td>
+    <td width="50%"><img src="docs/screenshots/16_trainer_ban_row.png" alt="Host settings: the Trainers row with Random 3, Free pick, Ban Trainer (3) Banned and Ban Batomon None"><br><sub>The Trainers row shows each ban list: <b>None</b> or <b>(n) Banned</b>; guests see the lists read-only.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/17_trainer_ban_free_pick.png" alt="Free pick: the banned Chemist card greyed out with a red X next to two open trainers"><br><sub><b>Free pick</b> — banned cards stay in place, greyed and locked; <b>Random 3</b> never offers them.</sub></td>
-    <td width="50%"><img src="docs/screenshots/18_chat_lobby.png" alt="The room tab with a yellow Chat button next to the room code and a NEW badge on it"><br><sub><b>Room chat</b> (0.7.0) — the yellow <b>Chat</b> button next to the room code; <b>NEW</b> = unread lines.</sub></td>
+    <td width="50%"><img src="docs/screenshots/18_chat_lobby.png" alt="The room tab with a yellow Chat button next to the room code and a NEW badge on it, Region Mixed lit"><br><sub><b>Room chat</b> (0.7.0) — the yellow <b>Chat</b> button next to the room code; <b>NEW</b> = unread lines.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/19_match_header.png" alt="The shop's top bar: a compact NEXT MATCH pill, the heart counter, Day 2, the chat bubble with a red pip; the leaderboard shows one player shopping and two ready"><br><sub><b>Cleaner header</b> (0.7.0) — compact, draggable <b>NEXT MATCH</b>, the hearts visible again, the chat bubble (pip = unread), and <b>ready</b> / <b>shopping</b> for every player.</sub></td>
     <td width="50%"><img src="docs/screenshots/20_chat_ingame.png" alt="The Room chat window open in the shop: join notices, three players' lines with times, the input field and Send"><br><sub><b>Chat in the match</b> — names, times, notices; any language; typing never presses the game's hotkeys.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti v0.7.1 window: four highlights and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
-    <td width="50%"></td>
+    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti v0.7.3 window: four highlights and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
+    <td width="50%"><img src="docs/screenshots/24_trinket_grid.png" alt="Salvage Master in the off-white dialog: a scrolling grid of the player's trinkets, one framed, and the game's details box for Earth Crest beside it"><br><sub><b>Trinket picks</b> — your backpack as a scrolling grid with the game's details box (0.7.2), now in the clean white dialog (0.7.3).</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/22_batomon_ban_window.png" alt="The Ban Batomon window: search field, rarity tabs All to Legendary, Clear all, and a grid of unit pictures with rarity badges"><br><sub><b>Batomon Ban</b> (0.7.3) — the host bans units from the room's shops: pictures, rarity tabs, <b>Clear all</b>; 3 per rarity always stay.</sub></td>
+    <td width="50%"><img src="docs/screenshots/23_batomon_ban_search.png" alt="The Ban Batomon window with pu typed: suggestion chips Puffloon, Venopuff, Pompummel and the matching units below"><br><sub><b>Live search</b> — the list filters as you type, small typos are forgiven, and <b>suggestions</b> complete the name.</sub></td>
   </tr>
 </table>
 
@@ -109,6 +113,17 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Ready for game 1.5.0** *(fixed in 0.7.3)* — gift trinkets work with the game's 1.5.0 patch, also the
+  new **Burglar**'s stolen trinket (its own card with **Confirm**), in single-player and in rooms. Room
+  battles wait until their result is saved before leaving the battle screen, as the game now does.
+- **Batomon Ban** *(new in 0.7.3)* — the host's **Ban Batomon** button opens every unit a shop can roll in
+  the room's region, with pictures and rarity tabs. **Live search** filters as you type, forgives small
+  typos and shows **suggestions**; **Clear all** removes every ban. Banned units never roll in a shop
+  (events, drops and items can still give them). Guests see the list read-only.
+- **Mixed region** *(new in 0.7.3)* — Region **All** is now **Mixed**: every region's Batomon in one shop
+  pool. In Mixed (and with Batomon bans) the game's scripted first-run shop shelves are off.
+- **Clean white theme** *(new in 0.7.3)* — Batomon Ban, Trainer Ban and the comeback / Tier 4 trinket and
+  event pick dialogs use a clean off-white theme.
 - **Backpack-style trinket picks** *(new in 0.7.2)* — Reforge, Salvage Master and Master Polish show your
   trinkets as the game's backpack slots in a scrolling grid (the picked one framed), with the game's
   details box beside it; Back and Confirm always stay on screen, however big your bag.
@@ -157,7 +172,8 @@ see the unofficial-mod disclaimer below.
   three offers, default) or **Free pick**: every player chooses any trainer from the whole roster. The
   trainers keep the game's own cards, three per row, in a list you scroll with the mouse wheel; they are
   sorted the same way for everyone, so each trainer is always in the same spot.
-- **Region pick** *(new in 0.6.11)* — the host's **Region** setting: **All** (default: every region's
+- **Region pick** *(new in 0.6.11)* — the host's **Region** setting: **Mixed** (default, called **All**
+  before 0.7.3: every region's
   units, trainers, trinkets and events in one pool), **Pantra** or **Jinto** (only that region). Guests
   see the host's choice on joining and whenever it changes; every run in the match starts in it.
 - **Same events for everyone** *(new in 0.6.11)* — the host's **Events** setting: **Same for all**
@@ -217,7 +233,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.7.2.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.3.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -236,7 +252,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.7.2-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.3-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -253,8 +269,8 @@ Prefer a zip? Download **`BatoMulti-v0.7.2-ManualInstall.zip`** from the [Releas
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.2 only joins
-0.7.2 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.3 only joins
+0.7.3 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -262,8 +278,8 @@ setup file) when a new version is out.
 Everyone needs BatoMulti installed (same version) and Steam running.
 
 - **Host:** Multiplayer → give the room a name (and a password if you want) → pick the shop timer,
-  lives, battle speed (4x by default), trainers (**Random 3** or **Free pick**), region (**All**, **Pantra**
-  or **Jinto**), events (**Same for all** or **Own luck**) and room size → keep the random **room code** or type your own (4-8 letters /
+  lives, battle speed (4x by default), trainers (**Random 3** or **Free pick**), region (**Mixed**, **Pantra**
+  or **Jinto**), **Ban Trainer** / **Ban Batomon**, events (**Same for all** or **Own luck**) and room size → keep the random **room code** or type your own (4-8 letters /
   digits) → **Create room** → press **Copy** and send the code to your friends → **Start match** once
   everyone is ready (or **Force Start** → **Confirm Force Start?** to go without waiting).
 - **Friends:** Multiplayer → type the code → **Join**. Or open **Browse rooms**, find the room and
@@ -307,7 +323,7 @@ anyone live.
 Yes (since 0.6.11), with the host's **Events** setting on **Same for all** (the default). The events on
 Day 3, 6 and 9 are then the same for every player in a match, at the same time: the host's match seed
 picks them, not each player's own luck or profile. **Own luck** switches back to per-player events. The host's
-**Region** setting (**All**, **Pantra** or **Jinto**) also decides which region's units, trainers,
+**Region** setting (**Mixed**, **Pantra** or **Jinto**) also decides which region's units, trainers,
 trinkets and events everyone plays with.
 
 ### Can I watch friends without joining the match?
@@ -327,12 +343,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.7.2.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.3.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.7.2.cmd uninstall
-   BatoMulti-Setup-0.7.2.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.7.2.cmd status
+   BatoMulti-Setup-0.7.3.cmd uninstall
+   BatoMulti-Setup-0.7.3.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.3.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

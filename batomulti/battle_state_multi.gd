@@ -206,6 +206,9 @@ func _commit_ghost_sim_results(ghost_sim: BattleSimulation, ghost_p1_data: RunDa
 	RunManager.determine_post_battle_state()            # the BatoMulti layer: never run_summary
 	_grant_lasso_copy(mine)
 	RunManager.save_full()
+	if "_ghost_committed" in self:                     # game 1.5.0+: the battle end waits for this (older games: no flag)
+		set("_ghost_committed", true)
+		emit_signal("ghost_committed")
 
 
 ## Side 1 only: team ids 0 <-> 1 on the finished ghost sim (called twice = restored).
@@ -432,6 +435,8 @@ func _on_battle_ended(winner_id: int, round_num: int, wins: int, lives: int):
 	if wants_replay:
 		_start_visual_battle(true)
 		return
+	if has_signal("ghost_committed") and not bool(get("_ghost_committed")):   # game 1.5.0+: a fast visual battle can end before the ghost commit
+		await Signal(self, "ghost_committed")
 	var next_state = RunManager.determine_post_battle_state()   # (an eliminated player's events / gifts are dropped there)
 	RunManager.data.notify_post_battle()
 	if b != null and b.has_method("suppress_post_battle") and b.suppress_post_battle(RunManager.data):

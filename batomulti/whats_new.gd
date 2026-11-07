@@ -23,6 +23,12 @@ const KEY := "seen"
 const WIDTH := 300.0
 ## Highlights per version (newest first in each list). A version without an entry shows no popup.
 const NOTES := {
+	"0.7.3": [
+		"Updated for Batomon Showdown 1.5.0: gift trinkets (also the Burglar's new stolen trinket) work in single-player and multiplayer.",
+		"Host Region \"All\" is now \"Mixed\": every region's Batomon in one shop pool.",
+		"New host Batomon Ban: live search with suggestions and unit pictures. Bans are picked by hand (no preset list).",
+		"Batomon Ban, Trainer Ban and the trinket and event pick dialogs use a clean white theme.",
+	],
 	"0.7.2": [
 		"Trinket picks (Reforge, Salvage Master, Master Polish) now show your backpack: a grid of trinket slots, the picked one framed.",
 		"A details box beside the dialog shows the hovered or picked trinket's name, rarity and effect.",

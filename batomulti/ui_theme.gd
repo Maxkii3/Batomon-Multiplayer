@@ -19,7 +19,9 @@ extends RefCounted
 ##   Button: BmPrimary (yellow, main action) · BmSecondary (blue, default) · BmDanger (red) · BmToggleOn (yellow,
 ##           the selected option) · BmToggleOff (blue)
 ##   Label:  BmTitle (header strip text) · BmSection · BmCode (the room code) · BmBad · BmDim · BmOnStrip
-##   PanelContainer: BmDialog (red-framed modal) · BmCard (white card) · BmStrip (yellow header strip)
+##           · BmTile / BmTileOn (a choice on a white sheet: a tile, dark text; On = picked, amber)
+##   PanelContainer: BmDialog (red-framed modal) · BmSheet (off-white selector window, the game's panel look)
+##           · BmCard (white card) · BmStrip (yellow header strip)
 
 const THEMES := "res://assets/ui/themes/"
 const TEX := "res://assets/ui/textures/common/"
@@ -47,6 +49,9 @@ const GREEN := Color("#3ec95a")          # "ready" (the lobby's Ready ✓ button
 const GREEN_DARK := Color("#23963b")
 const GREY := Color("#7b7b7b")
 const GREY_DARK := Color("#595959")
+const SHEET := Color("#f7f5ee")          # off-white of the selector windows (BmSheet)
+const PICK_FILL := Color("#ffe27a")      # a picked tile / slot on a white sheet
+const PICK_BORDER := Color("#8f5a00")    # dark amber: the game's yellow alone is unreadable on white
 
 const BODY_SIZE := 11                    # description_text / toggle buttons
 const SECTION_SIZE := 12                 # small_header
@@ -181,6 +186,27 @@ static func _button_set(th: Theme, type: String, color: String, fill: Color, bev
 	th.set_constant("outline_size", type, 3)
 
 
+## A choice on a white sheet: flat tile, dark text, no outline; hover + controller focus = a dark blue frame.
+static func _tile_set(th: Theme, type: String, fill: Color, border: Color) -> void:
+	th.set_type_variation(type, "Button")
+	var make := func(f: Color, b: Color) -> StyleBox:
+		var sb := _flat(f, b)
+		sb.border_width_bottom = 2
+		return _pad(sb, 6, 2, 6, 5)
+	th.set_stylebox("normal", type, make.call(fill, border))
+	th.set_stylebox("hover", type, make.call(fill, BLUE_DARK))
+	th.set_stylebox("pressed", type, make.call(fill.darkened(0.08), border))
+	th.set_stylebox("hover_pressed", type, make.call(fill.darkened(0.08), BLUE_DARK))
+	th.set_stylebox("disabled", type, make.call(INSET, INSET_BORDER))
+	var ring := _flat(Color(0, 0, 0, 0), BLUE_DARK)
+	ring.draw_center = false
+	th.set_stylebox("focus", type, ring)
+	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		th.set_color(k, type, DARK)
+	th.set_color("font_disabled_color", type, GREY_DARK)
+	th.set_constant("outline_size", type, 0)
+
+
 static func _build() -> Theme:
 	var th := Theme.new()
 	var body := font_body()
@@ -200,6 +226,11 @@ static func _build() -> Theme:
 	th.set_stylebox("panel", "BmDialog", _pad(dialog, 14, 10, 14, 10))
 	th.set_type_variation("BmStrip", "PanelContainer")
 	th.set_stylebox("panel", "BmStrip", _pad(strip, 6, 1, 6, 2))
+	var sheet: StyleBox = _pad(_or(game_box("panel_container.tres"), _flat(SHEET, OUTLINE, Color(0, 0, 0, 0), 2)), 14, 10, 14, 10)
+	if sheet is StyleBoxTexture:
+		(sheet as StyleBoxTexture).modulate_color = SHEET
+	th.set_type_variation("BmSheet", "PanelContainer")
+	th.set_stylebox("panel", "BmSheet", sheet)
 
 	# ---- buttons (blue = default / secondary)
 	_button_set(th, "Button", "blue", BLUE, BLUE_DARK)
@@ -219,6 +250,8 @@ static func _build() -> Theme:
 	th.set_stylebox("disabled", "BmToggleOn", th.get_stylebox("normal", "BmToggleOn"))
 	th.set_color("font_disabled_color", "BmToggleOn", WHITE)
 	th.set_stylebox("normal", "OptionButton", th.get_stylebox("normal", "Button"))
+	_tile_set(th, "BmTile", WHITE, OUTLINE)
+	_tile_set(th, "BmTileOn", PICK_FILL, PICK_BORDER)
 
 	# ---- labels
 	th.set_color("font_color", "Label", TEXT)

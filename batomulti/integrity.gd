@@ -15,23 +15,23 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "93e20c6d581441c0ab3ceb805860e342b59aec411d7ce58fc550fbd4b55ef137"
+const SELF_SHA256 := "3685a18e0fbb4b09efa939934c3b9d68c24644ab8f2feaa73ee8ffaec8873285"
 const MANIFEST := {
-	"batomulti.gd": "6b1ce50358e1c1b1db68304a7453dabf33a50c3d6732e1001cf6c40217968119",
-	"battle_state_multi.gd": "bd6cb562b7c1614ce6db2f905ac174ffe3f8898d997532efc519b5efbe98abc8",
+	"batomulti.gd": "813f9c927df0f2730142b4457937b1566cfe59b6da73889387970eb3f9c8f03b",
+	"battle_state_multi.gd": "c9ba12378a1d5942dd7d78f0663252c09079b600ab101c881c85c86a65c73562",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
 	"chat_window.gd": "996c3b38c17961aa3329c508f2c01bb158f96b7d7f98c81d27378e84dd2e968a",
 	"comeback_option.gd": "dd73027fb0316f2956dca3ecd6215be4cbf170a9d5299073d45a57de5073341b",
-	"comeback_panel.gd": "a632cefac262e2aba65ec5e608b1826e907ece31ae67aada94bf54159e22def8",
+	"comeback_panel.gd": "3b8c0f2b487e9c1d4dff46e67a3a107f254d975e913f1ba91f5335c388f7276b",
 	"comeback.gd": "f07d47cd2418317b65b7f798dc720bb931f821f0dddf09971eb52be47b331345",
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "97c68c3137b57cd22e0ec45d3c1081c63e4529957c0b7c7f7a8dad2e772fdc2b",
 	"event_art.gd": "c377650ce4c2d0d6f1866e15b7e40b6c4697e21b7f1065e6e15b08ad299c9140",
 	"leaderboard.gd": "cc09f7625780663565d09cee1ce27ab61f1817f2535591c4852a141df891e8ce",
 	"life_count_multi.gd": "1070beec33bec431e29a97a8f8e38203e73a2a7a706a0fb238d9b930aaa9e220",
-	"lobby_panel.gd": "98022b0207fb33d6cadc114fcbfff66883315fe61f180af693a277ee50fee15d",
-	"lobby_state.gd": "cf45b63188eb78607c786678dc627f54c6119ffceb67cd26fc9269889ec0572b",
+	"lobby_panel.gd": "5f2f544b488ce32cb81045e5c5900141cfc5c8979f90c657eeec30176e1aee67",
+	"lobby_state.gd": "69e77e568279ab50308ba059974e29b0647a8fe311e54168c8c447568d51c132",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
 	"match_client.gd": "68ca945f4fb1933a330e91f21e03bf2ee6f385e8d2b58512e1b23af3e6b23ef4",
 	"match_host.gd": "4da3e5b1e998a45c3a7df67db6dab4aa14abf8388dad5ecbfaab0e67559b8591",
@@ -44,19 +44,21 @@ const MANIFEST := {
 	"results_view.gd": "5e00523531f0d9fdac8b28c3309e8f42847cfc37e44a2642d314e8d97ab8b49d",
 	"room_code.gd": "336921ca9d411e734613472801dd64eeb1a017aeb66702778205be517b0866ac",
 	"room_info.gd": "8aaab056a74b9088a0cdd46fefb7f993fe200957982140b3b913464027fc32d8",
-	"run_manager_multi.gd": "7e3adb6d9515844557a62263aa46e7b7367a0f4412dea37b9eea87e95d57e769",
+	"run_manager_multi.gd": "b9a1cab43145bff8cf4414cb0f0fe30076660ff8e0d1104269743403883d7a2b",
 	"scout_view.gd": "0e7c226b5eb50cd8a62ab60a19421f404772de52ab5052f296426ac44aeabb2c",
+	"shop_manager_multi.gd": "1d643d32c91af8e7cd1bdb3029ec23f34a7bd03ecbc91926237afa8282c05a8b",
+	"species_ban.gd": "1e077eb082ec44afbb57a4baeb2c97ccd5bdabdafea6b8125069e2f714f869a0",
 	"spectate_broadcast.gd": "b4eec490c7dd13c9c7eab317b0c60c829aa5d0be4191a7e52c481815cdbf2823",
 	"spectator_view.gd": "b703095d80d712e45655cf5f392ad4ad8c9642d5bde1f5a1990da441b703592f",
 	"steam_transport.gd": "b177678f5f3da233e8d2a161f1fe7e66db5b2e0ce20753b578091ad3d13ecca3",
 	"tier4_option.gd": "248bd5f66e0a59d7043cf7db3fa27bebb4f277c7b20b80f37bf4e2a10d9b1c36",
 	"tier4.gd": "b3f76b9de7f9c6e4a811671c98af0bff014098e05b30a1839ff7846743ba7b22",
-	"trainer_ban.gd": "1481ea9c29627b710afa2df2599f8e2827432d48472c77b80d12aa000ed105c5",
+	"trainer_ban.gd": "edb12bbb2697a76685bc7c2a8054937ff8f9bc3289f1d9370efadf365a970d7c",
 	"trainer_select_multi.gd": "57411c91e4777541826ba8a1718719f9ae8d15b62736449ba95bb08716848a37",
 	"transport.gd": "bc713149cff76d6d19947c367b4ebac8a3bb5932edfa432053c4622e6db2ec42",
-	"ui_theme.gd": "8919f68dab31e82edb97a147332199634d2f5f0d476b98ecb3d5f310b1578e6a",
+	"ui_theme.gd": "215477067a191f7b020065be0571dd4763648908ad6d70f3a9947b60ee4af90b",
 	"updater.gd": "16924fee72ff524db0ea402c9da026a2b43282ebb73226d1992285a0c2a4bbb6",
-	"whats_new.gd": "2efd948b80f85a52e1962737c995e84f4ea542907a5d3ff43d09ad314ccc7417",
+	"whats_new.gd": "885d4f21bbf4782dd9a172b71ebd935663e8000a364d246308dce69c704abb53",
 }
 
 

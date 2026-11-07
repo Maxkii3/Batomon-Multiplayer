@@ -68,7 +68,7 @@ func _ready() -> void:
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP            # the cards under a confirm panel are not clickable
 	add_child(_dim)
 	_box = PanelContainer.new()
-	_box.theme_type_variation = "BmDialog"
+	_box.theme_type_variation = "BmSheet"
 	_box.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_box)
 	var v := VBoxContainer.new()
@@ -279,7 +279,7 @@ func _next_step() -> String:
 
 
 func _choice(text: String, value: String, on: bool, cb: Callable) -> Button:
-	var b := _button(text, cb, "BmToggleOn" if on else "BmToggleOff")
+	var b := _button(text, cb, "BmTileOn" if on else "BmTile")
 	b.custom_minimum_size = Vector2(0, 18)
 	_choices.add_child(b)
 	choice_buttons.append([b, value])
@@ -338,18 +338,18 @@ func _trinket_slots(held: Array) -> void:
 			b.mouse_exited.connect(_hover_slot.bind(-1, null))
 			b.focus_entered.connect(func(): if InputManager.is_using_controller(): _hover_slot(k, icon))
 			b.focus_exited.connect(func(): if InputManager.is_using_controller(): _hover_slot(-1, null))
-			b.add_theme_stylebox_override("hover", _frame(UiTheme.BLUE, 1, 0.0))
-			b.add_theme_stylebox_override("focus", _frame(UiTheme.BLUE, 1, 0.0))
+			b.add_theme_stylebox_override("hover", _frame(UiTheme.BLUE_DARK, 1, 0.0))
+			b.add_theme_stylebox_override("focus", _frame(UiTheme.BLUE_DARK, 1, 0.0))
 		if not held.is_empty():
 			var w: float = trinket_grid.get_child(0).custom_minimum_size.x
 			trinket_grid.columns = maxi(1, int((WIDTH - 32.0 - 10.0 + 2.0) / (w + 2.0)))   # 10 px: the scroll bar
 	for k in trinket_grid.get_child_count():
 		var b: Button = trinket_grid.get_child(k)
 		var on: bool = held[k] in option.picks
-		var st: StyleBox = _frame(UiTheme.YELLOW, 2, 0.35) if on else StyleBoxEmpty.new()
+		var st: StyleBox = _picked_frame() if on else StyleBoxEmpty.new()
 		b.add_theme_stylebox_override("normal", st)
 		b.add_theme_stylebox_override("pressed", st)
-		b.add_theme_stylebox_override("hover", _frame(UiTheme.YELLOW, 2, 0.35) if on else _frame(UiTheme.BLUE, 1, 0.0))
+		b.add_theme_stylebox_override("hover", _picked_frame() if on else _frame(UiTheme.BLUE_DARK, 1, 0.0))
 		choice_buttons.append([b, str(held[k])])
 
 
@@ -412,6 +412,12 @@ func _clear_trinkets() -> void:
 		c.queue_free()
 	trinket_grid.remove_meta("held")
 	trinket_grid.remove_meta("ids")
+
+
+static func _picked_frame() -> StyleBoxFlat:
+	var s := _frame(UiTheme.PICK_BORDER, 2, 0.0)
+	s.bg_color = UiTheme.PICK_FILL
+	return s
 
 
 static func _frame(c: Color, width: int, fill_a: float) -> StyleBoxFlat:

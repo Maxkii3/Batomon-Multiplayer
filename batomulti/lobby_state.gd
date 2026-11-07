@@ -31,11 +31,12 @@ const DEFAULT_SETTINGS := {
 	"tie_rule": "both_win",     # "both_win" | "no_change"
 	"max_players": 8,
 	"max_spectators": MAX_SPECTATORS,
-	"set_id": "",               # 0.6.11 region pool of every lobby run: "" = All, else a game set id (starter = Pantra, oshima = Jinto)
+	"set_id": "",               # 0.6.11 region pool of every lobby run: "" = Mixed (every region merged), else a game set id (starter = Pantra, oshima = Jinto)
 	"battle_speed": 4.0,        # host-set playback speed of every lobby battle (1 / 2 / 4 / 6 / 8), same for all
 	"sync_events": true,        # 0.6.11: true = the Day 3/6/9 events are the same for every player (host seed)
 	"free_trainers": false,     # 0.6.9: true = every player picks any trainer (whole roster), false = the game's 3 offers
 	"banned_trainers": [],      # 0.7.0: trainer ids nobody may pick (trainer_ban.gd); never edited in place, always replaced
+	"banned_species": [],       # species ids no shop roll may give (species_ban.gd); never edited in place, always replaced
 	"second_chance": true,      # the game's Second Chance: the first time at 0 lives -> 1 life + a buff
 }
 

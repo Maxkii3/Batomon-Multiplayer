@@ -44,8 +44,11 @@ func start_new_run(is_ranked: bool = false, set_id: String = "starter"):
 	session_online = false
 	super(false, set_id if set_id != "" else "starter")
 	session_online = was
-	if set_id == "" and data != null:
-		data.active_set_id = ""                    # region All (0.6.11): the game's set filters read "" as every set
+	if data != null and (set_id == "" or not b.client.state.settings.get("banned_species", []).is_empty()):
+		if set_id == "":
+			data.active_set_id = ""                # region Mixed (0.6.11): the game's set filters read "" as every set
+		data.is_curated_run = false                # a first-ever run's authored shelves are Pantra-only and ignore bans
+		data.pending_curated_shelves.clear()
 		save_full()
 	b.lobby_run_started(data)
 
@@ -108,10 +111,12 @@ func _pick_event_for_round(event_tier: int, next_round: int, set_id: String = ""
 
 
 ## Chest mirror: what was taken from the gift box reaches the spectators (shown, then cleared).
-func confirm_trinket_selection(trinket_id: String, take_all: bool = false):
+## Game 1.5.0 returns the Burglar's stolen trinket id ("" = none) and its gift screen types the result.
+func confirm_trinket_selection(trinket_id: String, take_all: bool = false) -> String:
 	if _bm_on():
 		_bm().chest_picked(trinket_id, take_all)
-	return super(trinket_id, take_all)
+	var stolen = super(trinket_id, take_all)
+	return stolen if stolen is String else ""          # older games return nothing
 
 
 ## Runs right after BattleState commits the battle. A lobby run never reaches run_summary:
