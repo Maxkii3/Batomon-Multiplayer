@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.7.4"
+const VERSION := "0.7.5"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -2734,14 +2734,18 @@ func _on_round_started(r: int) -> void:
 		_press_battle.call_deferred()
 
 
-## The game's Cancel button on the searching popup: hidden once the shop time is over (locked in).
+## The game's Cancel button on the searching popup while the room waits: shown until the shop time is over
+## (locked in), then hidden. Game 1.5.1 hides it 1.5 s after Battle! (a solo search cannot be taken back after
+## that); in a room the board can be taken back until the round starts, so it comes back here.
 func _cancel_button_tick() -> void:
 	var ui = _shop_cancel_button.get_ref() if _shop_cancel_button != null else null
 	var cb = ui.get("cancel_button") if ui != null and is_instance_valid(ui) else null
-	if cb == null or not cb.visible or client == null:
+	if cb == null or client == null or not _searching or client.phase != "ready_wait":
 		return
-	if client.phase == "ready_wait" and client.seconds_left() <= 0.5:
-		cb.visible = false
+	var want: bool = client.seconds_left() > 0.5
+	if cb.visible != want:
+		cb.visible = want
+		cb.focus_mode = Control.FOCUS_ALL if want else Control.FOCUS_NONE
 
 
 func _on_force_ready(_round_n: int) -> void:

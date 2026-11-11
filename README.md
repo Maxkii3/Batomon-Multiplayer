@@ -19,7 +19,7 @@ tournament tools, no restarts between rounds — just share the room code.
 [Play with friends](#-how-to-play-with-friends) ·
 [Report a bug](https://github.com/Maxkii3/Batomon-Multiplayer/issues)
 
-Requires Batomon Showdown on **Steam for Windows** (built and tested on game **1.5.0**). Everyone playing
+Requires Batomon Showdown on **Steam for Windows** (built and tested on game **1.5.1**). Everyone playing
 needs the same BatoMulti version and Steam running. This is a community mod, not an official multiplayer update.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/maxkii3)
@@ -80,7 +80,7 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/20_chat_ingame.png" alt="The Room chat window open in the shop: join notices, three players' lines with times, the input field and Send"><br><sub><b>Chat in the match</b> — names, times, notices; any language; typing never presses the game's hotkeys.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti window: ghost bots, why a bot is a different real player every Day, Trinket and Item bans, Day limit, tabs, bots fight on, and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
+    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with the What's New in BatoMulti v0.7.5 window: events back for game 1.5.1, Room Presets, the badge count past 10 wins, Cancel in rooms, and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
     <td width="50%"><img src="docs/screenshots/24_trinket_grid.png" alt="Salvage Master in the off-white dialog: a scrolling grid of the player's trinkets, one framed, and the game's details box for Earth Crest beside it"><br><sub><b>Trinket picks</b> — your backpack as a scrolling grid with the game's details box (0.7.2), now in the clean white dialog (0.7.3).</sub></td>
   </tr>
   <tr>
@@ -106,6 +106,10 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
   <tr>
     <td width="50%"><img src="docs/screenshots/33_bot_night_results.png" alt="Game over at Round 9 of 12: Bot 3 (Master) wins with 1 life, then the host, a friend, Bot 1 (Silver) and Bot 2 (Gold)"><br><sub><b>Results</b> — bots are ranked like everyone else (here the Master bot won on Day 9 of 12).</sub></td>
     <td width="50%"><img src="docs/screenshots/34_bot_night_shop.png" alt="The shop on Day 4: the leaderboard Round 4/12 lists Bot 2 (Gold), Bot 3 (Master), the host, a friend and Bot 1 (Silver) with lives, wins and ready"><br><sub><b>In the match</b> — the leaderboard (and NEXT MATCH) name each bot's level; the header counts toward the <b>Day limit</b> (Round 4/12).</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/35_room_presets.png" alt="The Room Presets window over the room panel: a name field, Save setting, Export setting and Import setting, and two saved presets (Casual, Spring Cup) with a one-line summary and Load, Export and Delete buttons"><br><sub><b>Room Presets</b> (new in 0.7.5) — save the host settings under a name, load them back, or <b>Export</b> them as a file a friend can <b>Import</b>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/36_presets_button.png" alt="The room panel: Host settings with the Match, Players and Bots, Content and Bans tabs and a Presets button at the end of the row"><br><sub>The <b>Presets</b> button sits at the end of the Host settings row; the window opens on top, so the panel stays tidy.</sub></td>
   </tr>
 </table>
 
@@ -134,6 +138,17 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Room Presets** *(new in 0.7.5)* — the **Presets** button on the Host settings row opens its own window:
+  **Save setting** keeps the room's rules under a name, **Load** puts them back, **Export setting** saves them
+  as a `.bmpreset` file wherever you pick, and **Import setting** opens one (it joins your saved presets and,
+  for the host, loads into the room). Run every tournament with the same rules, or share a design with friends.
+  A preset holds the rules only: never the room name or the password.
+- **Badge count past 10 wins** *(new in 0.7.5)* — room matches go on past 10 wins; from the 11th badge the win
+  screen shows the badge and **x11**, **x12**... like the game's Extended Mode, instead of a badge case with
+  badges off the screen.
+- **Ready for game 1.5.1** *(fixed in 0.7.5)* — the Day 3 / 6 / 9 events are back in ranked and solo runs
+  (0.7.4 lost them after the game's 1.5.1 patch), and in a room **Cancel** after **Battle!** stays until the
+  round starts again.
 - **Ghost bots** *(new in 0.7.4)* — no full room? The host picks a **Ghost level** and presses **Add bot**
   (on the **Players & Bots** tab) to seat a bot; every bot keeps the level it was added with, so one room
   can mix them (say a Silver bot and a Master bot). Each round a bot plays a **real player's board** from the game's own ranked ghosts,
@@ -273,7 +288,7 @@ see the unofficial-mod disclaimer below.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.7.4.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.5.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -292,7 +307,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.7.4-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.5-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -309,8 +324,8 @@ Prefer a zip? Download **`BatoMulti-v0.7.4-ManualInstall.zip`** from the [Releas
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.4 only joins
-0.7.4 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.5 only joins
+0.7.5 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
@@ -388,7 +403,8 @@ Yes — a whole mini-tournament fits in **one match**. Create a room, raise **Ma
 **Start match** when everyone is in. All players battle round after round in the same lobby until one
 is left; the leaderboard shows the standings live and the results screen gives every placement. No
 bracket tool, no separate games to organise. Eliminated players and spectators can keep watching
-anyone live.
+anyone live. Running a series? Save the rules once with **Presets** (0.7.5) and load them for every match, or
+**Export** them as a file so every host plays by the same rules.
 
 ### Do all players get the same events?
 
@@ -415,12 +431,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.7.4.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.5.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.7.4.cmd uninstall
-   BatoMulti-Setup-0.7.4.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.7.4.cmd status
+   BatoMulti-Setup-0.7.5.cmd uninstall
+   BatoMulti-Setup-0.7.5.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.5.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.

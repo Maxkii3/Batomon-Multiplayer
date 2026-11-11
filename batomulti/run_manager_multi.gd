@@ -82,9 +82,11 @@ func upload_current_team(won_battle: bool, battle_metrics: Dictionary = {}):
 ## BatoMulti comeback event (comeback.gd, v0.5.2). Day 12, 15, 18...: the room's Tier 4 event (tier4.gd, 0.7.0).
 func process_post_battle_progression(target_data: RunData):
 	var next_round := int(target_data.current_round) + 1
+	var before := [str(target_data.pending_event_id), str(target_data.queued_event_id)]
 	super(target_data)
 	if not _bm_on():
 		return
+	_sync_event(target_data, next_round, before)
 	if target_data.pending_event_id == Comeback.VANILLA:
 		target_data.pending_event_id = Comeback.ID
 		Comeback.ensure(target_data)
@@ -97,11 +99,27 @@ func process_post_battle_progression(target_data: RunData):
 ## The pick comes from the host's lobby seed (START + snapshots) + Day + region, never this PC's RNG or its
 ## profile (the game's tutorial events and unlock gates follow each player's games_played). Host setting
 ## "sync_events" off = the game's own per-player pick.
-func _pick_event_for_round(event_tier: int, next_round: int, set_id: String = "") -> EventData:
+## Applied AFTER the game's own pick, never by overriding _pick_event_for_round: game 1.5.1 gave that a 4th
+## argument, the old 3-argument override then silently returned null and ranked / solo runs lost every
+## Day 3 / 6 / 9 event (0.7.4), while a 4-argument super() does not even compile on 1.5.0.
+func _sync_event(run: RunData, next_round: int, before: Array) -> void:
 	var b = _bm()
-	if not _bm_on() or b.client == null or not bool(b.client.state.settings.get("sync_events", true)) \
-			or not GameDatabase.has_method("_build_event_pool"):
-		return super(event_tier, next_round, set_id)
+	if b.client == null or not bool(b.client.state.settings.get("sync_events", true)):
+		return
+	var field := "queued_event_id" if run.pending_event_id == Comeback.VANILLA else "pending_event_id"
+	var i := 1 if field == "queued_event_id" else 0
+	if str(run.get(field)) == before[i]:
+		return                                       # the game picked no event this Day
+	var picked = GameDatabase.get_event_by_id(str(run.get(field)))
+	var synced = synced_event(int(picked.tier), next_round, str(run.active_set_id)) if picked != null else null
+	if synced != null:
+		run.set(field, synced.id)
+
+
+func synced_event(event_tier: int, next_round: int, set_id: String) -> EventData:
+	var b = _bm()
+	if b == null or b.client == null or not GameDatabase.has_method("_build_event_pool"):
+		return null
 	var pool: Array = GameDatabase._build_event_pool(event_tier, -1, set_id)
 	if pool.is_empty() and set_id != "":
 		pool = GameDatabase._build_event_pool(event_tier, -1, "")    # the game's own fallback: the full pool

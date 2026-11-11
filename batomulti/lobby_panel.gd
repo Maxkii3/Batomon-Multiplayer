@@ -33,6 +33,7 @@ const SpeciesBan := preload("res://batomulti/species_ban.gd")
 const ChatWindow := preload("res://batomulti/chat_window.gd")
 const BotGhosts := preload("res://batomulti/bot_ghosts.gd")
 const ContentBan := preload("res://batomulti/content_ban.gd")
+const RoomPresets := preload("res://batomulti/room_presets.gd")
 ## Host settings categories (one shown at a time: the panel must fit 640x360).
 const CATEGORIES := ["Match", "Players & Bots", "Content & Bans"]
 const CATEGORY_TIPS := ["Shop timer, lives, tie rule, Day limit, battle speed, events",
@@ -85,6 +86,8 @@ var content_ban_btns := {}         # "trinket" / "item" -> its Ban button
 var content_ban_labels := {}       # "trinket" / "item" -> "None" / "(n) Banned"
 var content_ban_windows := {}      # "trinket" / "item" -> its window (built on first open)
 var _content_bans := {"trinket": [], "item": []}   # the room's banned trinket / item ids
+var presets_btn: Button            # 0.7.5: opens Room Presets (save / load / export / import the host settings)
+var presets_window: RoomPresets    # built on first open
 var max_players_spin: SpinBox      # room size (0.6.7): players 2..250 and spectators, together <= Steam's 250
 var max_specs_spin: SpinBox
 var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); the lit one is the room's speed
@@ -361,6 +364,13 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		cb.tooltip_text = CATEGORY_TIPS[i]
 		category_buttons.append(cb)
 		cat_row.add_child(cb)
+	var cat_gap := Control.new()
+	cat_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cat_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cat_row.add_child(cat_gap)
+	presets_btn = _button("Presets", func(): open_presets())
+	presets_btn.tooltip_text = "Save these host settings, load a saved set, or share them as a code (Export / Import)"
+	cat_row.add_child(presets_btn)
 	vb.add_child(cat_row)
 	for i in CATEGORIES.size():
 		var box := VBoxContainer.new()
@@ -735,6 +745,117 @@ func open_content_bans(kind: String) -> void:
 	w.position = ((get_viewport_rect().size - w.size) * 0.5).floor()
 
 
+## Room Presets (room_presets.gd), built on first use, centred like the ban windows.
+func open_presets() -> void:
+	if presets_window == null:
+		presets_window = RoomPresets.new()
+		presets_window.top_level = true
+		presets_window.visible = false
+		presets_window.load_requested.connect(_on_preset_load)
+		presets_window.name_edit.focus_entered.connect(_mute_game_keys.bind(true))
+		presets_window.name_edit.focus_exited.connect(_mute_game_keys.bind(false))
+		add_child(presets_window)
+		presets_window.setup(hub.cfg, hub.CFG_PATH, current_rules)
+	presets_window.visible = true
+	refresh()
+	presets_window.refresh()
+	presets_window.reset_size()
+	presets_window.position = ((get_viewport_rect().size - presets_window.size) * 0.5).floor()
+
+
+## The rules to save / export: the room's own in a room (a guest's panel does not mirror every field), else the panel's.
+func current_rules() -> Dictionary:
+	var t = hub.transport if hub != null else null
+	if t != null and t.code != "" and hub.client != null:
+		return (hub.host.state.settings if t.is_host() and hub.host != null else hub.client.state.settings).duplicate(true)
+	return settings()
+
+
+## Before a room, or the host in the lobby: the only times the host settings can change.
+func can_edit_rules() -> bool:
+	var t = hub.transport if hub != null else null
+	if t == null or t.code == "":
+		return true
+	return t.is_host() and hub.client != null and hub.client.phase == "lobby"
+
+
+func _on_preset_load(rules: Dictionary, from: String) -> void:
+	if not can_edit_rules():
+		presets_window.say("Only the host can load settings, and only before the match starts.")
+		return
+	var dropped := apply_rules(rules)
+	presets_window.say("Loaded %s into the host settings." % from + ("" if dropped == 0 else
+		" %d ban(s) left out: unknown in this game version, or too few would stay." % dropped))
+
+
+## A preset or an imported code into the host settings. Untrusted (a pasted code): only the rule keys, every
+## number clamped by its own field, unknown choices ignored, unknown ids dropped and the ban minimums kept; then
+## the room gets it like any host change. Returns how many ban ids were left out.
+func apply_rules(d: Dictionary) -> int:
+	var num := func(k: String, fallback: float) -> float:
+		var v = d.get(k)
+		return float(v) if (v is float or v is int) and is_finite(float(v)) else fallback
+	_minutes.set_value_no_signal(num.call("shop_seconds", _minutes.value * 60.0) / 60.0)
+	_lives.set_value_no_signal(num.call("lives", _lives.value))
+	day_limit.set_value_no_signal(num.call("day_limit", day_limit.value))
+	_note_day_limit()
+	if str(d.get("tie_rule", "")) in ["both_win", "no_change"]:
+		_tie.select(0 if str(d.tie_rule) == "both_win" else 1)
+	var si := SPEEDS.find(num.call("battle_speed", -1.0))
+	if si >= 0:
+		_speed_i = si
+	if d.get("sync_events") is bool:
+		_sync_events = d.sync_events
+	if d.get("free_trainers") is bool:
+		_free_trainers = d.free_trainers
+	var bi := BotGhosts.LEVELS.find(str(d.get("bot_level", "")))
+	if bi >= 0:
+		bot_level.select(bi)
+	var c := LobbyState.clamp_size(int(num.call("max_players", max_players_spin.value)), int(num.call("max_spectators", max_specs_spin.value)))
+	max_players_spin.set_value_no_signal(c[0])
+	max_specs_spin.max_value = LobbyState.STEAM_MEMBER_CAP - int(max_players_spin.value)
+	max_specs_spin.set_value_no_signal(c[1])
+	if d.has("set_id"):
+		_set_id = str(d.set_id) if str(d.set_id) in region_ids else ""
+	var ids := func(k: String) -> Array:
+		var v = d.get(k, [])
+		var out: Array = []
+		if v is Array:
+			for x in v.slice(0, 400):
+				if (x is String or x is StringName) and not str(x) in out:
+					out.append(str(x))
+		return out
+	var wanted := 0
+	var kept := 0
+	if d.has("banned_trainers"):
+		var want: Array = ids.call("banned_trainers")
+		_bans = TrainerBan.keep_playable(want.filter(func(id): return GameDatabase.get_trainer_by_id(id) != null), _set_id)
+		wanted += want.size()
+		kept += _bans.size()
+	if d.has("banned_species"):
+		var want: Array = ids.call("banned_species")
+		_species_bans = SpeciesBan.keep_playable(want, _set_id)
+		wanted += want.size()
+		kept += _species_bans.size()
+	for kind in _content_bans:
+		var key: String = ContentBan.KINDS[kind].key
+		if d.has(key):
+			var want: Array = ids.call(key)
+			_content_bans[kind] = ContentBan.keep_kind(want, kind, _set_id)
+			wanted += want.size()
+			kept += _content_bans[kind].size()
+	_style_speeds()
+	_style_trainers()
+	_style_regions()
+	_style_events()
+	_refresh_bans(true)
+	_refresh_species_bans(true)
+	_refresh_content_bans(true)
+	_push_settings()
+	refresh()
+	return wanted - kept
+
+
 func _on_content_ban_toggled(kind: String, id: String) -> void:
 	var after := ContentBan.toggle_kind(_content_bans[kind], id, kind, _set_id)
 	if after == _content_bans[kind]:
@@ -953,6 +1074,9 @@ func refresh() -> void:
 		for kind in _content_bans:
 			_content_bans[kind] = ContentBan.banned_kind(hub.client.state.settings, kind)
 	_refresh_content_bans(not speed_locked)
+	if presets_window != null and presets_window.visible and presets_window.can_load != can_edit_rules():
+		presets_window.can_load = can_edit_rules()
+		presets_window.refresh()
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:

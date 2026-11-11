@@ -23,6 +23,12 @@ const KEY := "seen"
 const WIDTH := 300.0
 ## Highlights per version (newest first in each list). A version without an entry shows no popup.
 const NOTES := {
+	"0.7.5": [
+		"Updated for Batomon Showdown 1.5.1: Day 3 / 6 / 9 events are back in ranked and solo runs (0.7.4 lost them after the game patch).",
+		"Room Presets: save the host settings under a name, load them later, or Export them as a file a friend can Import.",
+		"Past 10 wins the win screen shows your badge count (x11, x12...) like Extended Mode.",
+		"In a room you can take Battle! back with Cancel again while the others still shop (game 1.5.1 had hidden it).",
+	],
 	"0.7.4": [
 		"Ghost bots: pick a level (Auto = your rank, up to Master) and Add bot. Each bot keeps its own level, shown in its name: Bot 1 (Silver), Bot 2 (Master). Past Day 16 they use Endless ghosts.",
 		"A bot meets you with a different real player every Day: the game's ghost files keep only a few Days of each run (many runs only 1 Day, under 5% Days 1-10), so one player could not last a match.",

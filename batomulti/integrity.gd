@@ -15,11 +15,11 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "ddff9c4ed6c65d43d96d69f09b2871b98007ab05fd576a2b7112415917bd1420"
+const SELF_SHA256 := "1101128ca57bd534f5ada95b9451bdf9d79a3b7d6a7f5f38b1a69a087df4a6a8"
 const MANIFEST := {
-	"batomulti.gd": "4a3442437831ac46f32baeea6f89ea707287f1d7d8b1da43b77f53795ec3047d",
+	"batomulti.gd": "e31d260f3cb6a5e34d04c7f5b6bf3546547086fffb1f25d59cfee2fc35ff51de",
 	"battle_state_multi.gd": "c9ba12378a1d5942dd7d78f0663252c09079b600ab101c881c85c86a65c73562",
-	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
+	"battle_view_mirror.gd": "113174eec8685eed18261132b4d491832b1cb83db8a4051f6386ef043b3304a9",
 	"bot_ghosts.gd": "1bd207ad9480176f27a8c7d599fb5eec71617209cf95664376c5e7020037b18f",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
 	"chat_window.gd": "996c3b38c17961aa3329c508f2c01bb158f96b7d7f98c81d27378e84dd2e968a",
@@ -32,7 +32,7 @@ const MANIFEST := {
 	"event_art.gd": "c377650ce4c2d0d6f1866e15b7e40b6c4697e21b7f1065e6e15b08ad299c9140",
 	"leaderboard.gd": "24119a7c0ecb159d2f12d97bbe106274f62a91cb25b78726b0327c16e22b0101",
 	"life_count_multi.gd": "1070beec33bec431e29a97a8f8e38203e73a2a7a706a0fb238d9b930aaa9e220",
-	"lobby_panel.gd": "dee363787484bbb6b5d2a823296edcec9b436a32d6e40d58279205956fe442f0",
+	"lobby_panel.gd": "210d6f7832ee6efa35cac7376ffe5db26241ce2b29a23524c0e7acc3d33c2835",
 	"lobby_state.gd": "d6811f39f363bd74619c444d702ad10ad2feb0a6463e1e47f6d7041e89cf7c7b",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
 	"match_client.gd": "99cfd37eeedb386c987de65addf2efd36d354c7fa79a20cc77ce2f455febef16",
@@ -46,7 +46,8 @@ const MANIFEST := {
 	"results_view.gd": "5e00523531f0d9fdac8b28c3309e8f42847cfc37e44a2642d314e8d97ab8b49d",
 	"room_code.gd": "336921ca9d411e734613472801dd64eeb1a017aeb66702778205be517b0866ac",
 	"room_info.gd": "8aaab056a74b9088a0cdd46fefb7f993fe200957982140b3b913464027fc32d8",
-	"run_manager_multi.gd": "b9a1cab43145bff8cf4414cb0f0fe30076660ff8e0d1104269743403883d7a2b",
+	"room_presets.gd": "6a2c160ff7713cee19cecf89807d0c73537a5cc03e721ceca8d2331e93a2bc23",
+	"run_manager_multi.gd": "5e38dc02c1a9bc9fb50911ec6eff771e96db76ad40b1581228988e0f37497eeb",
 	"scout_view.gd": "0e7c226b5eb50cd8a62ab60a19421f404772de52ab5052f296426ac44aeabb2c",
 	"shop_manager_multi.gd": "1d643d32c91af8e7cd1bdb3029ec23f34a7bd03ecbc91926237afa8282c05a8b",
 	"species_ban.gd": "0b873ee6de971f5cd68b6649fed33e569d16444d9eb5ecadbc6eb75b6341a241",
@@ -60,7 +61,7 @@ const MANIFEST := {
 	"transport.gd": "bc713149cff76d6d19947c367b4ebac8a3bb5932edfa432053c4622e6db2ec42",
 	"ui_theme.gd": "215477067a191f7b020065be0571dd4763648908ad6d70f3a9947b60ee4af90b",
 	"updater.gd": "16924fee72ff524db0ea402c9da026a2b43282ebb73226d1992285a0c2a4bbb6",
-	"whats_new.gd": "99428282b6608a4cf6bda1aafdce142bbd6fdae5a9297e28b6729918f458e604",
+	"whats_new.gd": "48dafeabe2abd38edc585bcdeb4d2810ceb7bde6c252d698d31709aac81be0e1",
 }
 
 

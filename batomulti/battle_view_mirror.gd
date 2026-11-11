@@ -25,6 +25,8 @@ const SWAP_PAIRS := [
 	["player_trinket_bag_ui", "enemy_trinket_bag_ui"],
 ]
 
+const BADGE_CASE_SLOTS := 10        # the game's badge case (a vanilla run ends at 10 wins)
+
 var mirrored := false
 ## Spectating (2026-10-06): no personal widgets (trinket bags), and when the spectator has no run of its
 ## own (a dedicated spectator on the main menu) the game's field setup reads this run instead of a null
@@ -103,16 +105,22 @@ func refresh_mirrored_bags(team0: RunData, team1: RunData) -> void:
 
 
 ## The game picks the loser as "1 if victory else 0" (player = team 0); mirrored, this player is team 1.
+## A room match goes past 10 wins: the badge case has 10 slots and drew badge 11+ off the screen, so from the
+## 11th badge on the win screen is the game's own Extended Mode counter (badge + "x n") instead (0.7.5).
 func play_battle_end_sequence(context) -> bool:
-	if not mirrored:
-		return await super(context)
-	var g0 = visual_grid[0]
-	visual_grid[0] = visual_grid[1]
-	visual_grid[1] = g0
+	var case0 = badge_case
+	if int(context.get("current_wins", 0)) + 1 > BADGE_CASE_SLOTS and badge_counter != null:
+		badge_case = badge_counter
+	if mirrored:
+		var g0 = visual_grid[0]
+		visual_grid[0] = visual_grid[1]
+		visual_grid[1] = g0
 	var r = await super(context)
-	g0 = visual_grid[0]
-	visual_grid[0] = visual_grid[1]
-	visual_grid[1] = g0
+	if mirrored:
+		var g1 = visual_grid[0]
+		visual_grid[0] = visual_grid[1]
+		visual_grid[1] = g1
+	badge_case = case0
 	return r
 
 

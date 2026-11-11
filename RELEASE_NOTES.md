@@ -1,3 +1,46 @@
+# BatoMulti 0.7.5 — Batomon Showdown 1.5.1 fix, Room Presets, badge count past 10
+
+An update for the Batomon Showdown **1.5.1** patch (2026-11-11), plus two community requests.
+
+**Updating from 0.6.2-0.7.4:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.5: 0.7.4 and 0.7.5 players can't share a room.
+Built and tested on Batomon Showdown **1.5.1**.
+
+## 🐞 Batomon Showdown 1.5.1 fixes
+
+- **Events were missing in ranked and solo runs with 0.7.4** (player report, thanks!): 1.5.1 changed how
+  the game picks the Day 3 / 6 / 9 event (each run's pick is now locked to that run). BatoMulti's run layer
+  still used the old way, so the game got no event back and skipped it, in **every** run while the mod was
+  installed, not only in rooms. BatoMulti no longer replaces the game's event pick at all: the game picks
+  as usual, and only inside a room with **Events: Same for all** is the result swapped for the room's
+  shared event. Ranked and solo runs now get exactly the game's own events.
+- **Cancel after Battle! in rooms:** 1.5.1 hides the searching popup's **Cancel** 1.5 s after **Battle!**.
+  In a room the board can be taken back until the round starts, so **Cancel** now stays while the room
+  is still waiting for other players, and goes away when the shop time is over.
+
+## 💾 Room Presets (host settings)
+
+- A **Presets** button at the end of the **Host settings** row opens the **Room Presets** window.
+- **Save setting:** type a name and keep the room's rules on your PC (the same name replaces it). Each
+  saved preset shows a one-line summary (shop timer, lives, speed, region, Day limit, bans) with **Load**,
+  **Export** and **Delete**.
+- **Export setting** saves the rules as a **`.bmpreset` file** wherever you pick (Windows' save dialog);
+  **Import setting** opens one. The imported preset joins your list and, for the host, loads into the room.
+  Run every match of a tournament with the same rules, or share an interesting design with friends.
+- A preset holds the **rules only**: shop timer, lives, tie rule, Day limit, battle speed, events, room
+  size, bot level, region, trainer pick and all four ban lists. Never the room name or the password.
+- An imported file is checked value by value: numbers are kept in range, unknown choices are ignored, and
+  bans the game doesn't know (or that would leave too few of a rarity) are left out, with a note.
+- Guests can save, export and import the room's rules; only the host can load them into the room.
+
+## 🏅 Badge count past 10 wins
+
+- Room matches go on past 10 wins. From the **11th badge** the win screen shows the badge and **x11**,
+  **x12**... like the game's Extended Mode, instead of a 10-slot badge case with the new badges placed
+  off the screen.
+
+---
+
 # BatoMulti 0.7.4 — Ghost bots, Trinket & Item bans, Day limit
 
 Play with bots when the room is short of friends, plus three new host settings.
