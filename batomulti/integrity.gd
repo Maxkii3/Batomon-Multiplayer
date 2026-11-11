@@ -15,27 +15,29 @@ extends RefCounted
 ## problem -> BatoMulti removes itself and the game runs vanilla (the RunManager layer passes through).
 
 const LICENSE_SHA256 := "dd128ed5c36ed3cc7a4c19e1fae034959141af25578095aa460e2cdc3aa7c651"
-const SELF_SHA256 := "3685a18e0fbb4b09efa939934c3b9d68c24644ab8f2feaa73ee8ffaec8873285"
+const SELF_SHA256 := "ddff9c4ed6c65d43d96d69f09b2871b98007ab05fd576a2b7112415917bd1420"
 const MANIFEST := {
-	"batomulti.gd": "813f9c927df0f2730142b4457937b1566cfe59b6da73889387970eb3f9c8f03b",
+	"batomulti.gd": "4a3442437831ac46f32baeea6f89ea707287f1d7d8b1da43b77f53795ec3047d",
 	"battle_state_multi.gd": "c9ba12378a1d5942dd7d78f0663252c09079b600ab101c881c85c86a65c73562",
 	"battle_view_mirror.gd": "d62640fc261dd665b5dd41398b229825adeda890e3550c9c4386d70b27ba7445",
+	"bot_ghosts.gd": "1bd207ad9480176f27a8c7d599fb5eec71617209cf95664376c5e7020037b18f",
 	"canonical_battle.gd": "d3a8f967e57c92fc6326a5e83c06bb9e64067beb9321447bf8386fb64534e599",
 	"chat_window.gd": "996c3b38c17961aa3329c508f2c01bb158f96b7d7f98c81d27378e84dd2e968a",
 	"comeback_option.gd": "dd73027fb0316f2956dca3ecd6215be4cbf170a9d5299073d45a57de5073341b",
 	"comeback_panel.gd": "3b8c0f2b487e9c1d4dff46e67a3a107f254d975e913f1ba91f5335c388f7276b",
 	"comeback.gd": "f07d47cd2418317b65b7f798dc720bb931f821f0dddf09971eb52be47b331345",
+	"content_ban.gd": "6f52277c497faa9448e9e03cf5acd7e1be204daf55ab29c92066115067f4f19d",
 	"effect_director_mirror.gd": "aef34602c281d422ff89d3b1137dd78b15a059f7d3810b42010b4f0c8382ac24",
 	"elimination_hub.gd": "97c68c3137b57cd22e0ec45d3c1081c63e4529957c0b7c7f7a8dad2e772fdc2b",
 	"event_art.gd": "c377650ce4c2d0d6f1866e15b7e40b6c4697e21b7f1065e6e15b08ad299c9140",
-	"leaderboard.gd": "cc09f7625780663565d09cee1ce27ab61f1817f2535591c4852a141df891e8ce",
+	"leaderboard.gd": "24119a7c0ecb159d2f12d97bbe106274f62a91cb25b78726b0327c16e22b0101",
 	"life_count_multi.gd": "1070beec33bec431e29a97a8f8e38203e73a2a7a706a0fb238d9b930aaa9e220",
-	"lobby_panel.gd": "5f2f544b488ce32cb81045e5c5900141cfc5c8979f90c657eeec30176e1aee67",
-	"lobby_state.gd": "69e77e568279ab50308ba059974e29b0647a8fe311e54168c8c447568d51c132",
+	"lobby_panel.gd": "dee363787484bbb6b5d2a823296edcec9b436a32d6e40d58279205956fe442f0",
+	"lobby_state.gd": "d6811f39f363bd74619c444d702ad10ad2feb0a6463e1e47f6d7041e89cf7c7b",
 	"loopback_transport.gd": "cbfd88af40c702c52bc8aa6eed05ab2eb71bb48fc11d5671b7372cbfe07c29cf",
-	"match_client.gd": "68ca945f4fb1933a330e91f21e03bf2ee6f385e8d2b58512e1b23af3e6b23ef4",
-	"match_host.gd": "4da3e5b1e998a45c3a7df67db6dab4aa14abf8388dad5ecbfaab0e67559b8591",
-	"match_session.gd": "9503bec01709a04b8e399f9f6f55924217ab08434a9c8873a800ee188837f9d0",
+	"match_client.gd": "99cfd37eeedb386c987de65addf2efd36d354c7fa79a20cc77ce2f455febef16",
+	"match_host.gd": "3546d8768e736dc609907876fbf394c36d753a347755ea72c9432ec234e47892",
+	"match_session.gd": "bf8325dfa42a4d6e968bbddaad37baf039d0c3280730d21e7191cc276f5ea0ce",
 	"mock_transport.gd": "9bd6b10830cf67d7875ebbc57cca2f86fe1a60793224817a9c537b595d13feb5",
 	"next_match_bar.gd": "007366ba6828a7df72239ea765b2c6d03c1eebd96df21133026c5f326aa5d55e",
 	"pairing.gd": "0e12a4da2e0af222d27b6ba3f7dcb2be25b9dacf4387f22150272cf790c86625",
@@ -47,8 +49,8 @@ const MANIFEST := {
 	"run_manager_multi.gd": "b9a1cab43145bff8cf4414cb0f0fe30076660ff8e0d1104269743403883d7a2b",
 	"scout_view.gd": "0e7c226b5eb50cd8a62ab60a19421f404772de52ab5052f296426ac44aeabb2c",
 	"shop_manager_multi.gd": "1d643d32c91af8e7cd1bdb3029ec23f34a7bd03ecbc91926237afa8282c05a8b",
-	"species_ban.gd": "1e077eb082ec44afbb57a4baeb2c97ccd5bdabdafea6b8125069e2f714f869a0",
-	"spectate_broadcast.gd": "b4eec490c7dd13c9c7eab317b0c60c829aa5d0be4191a7e52c481815cdbf2823",
+	"species_ban.gd": "0b873ee6de971f5cd68b6649fed33e569d16444d9eb5ecadbc6eb75b6341a241",
+	"spectate_broadcast.gd": "d8f444882f9aec7f368d9894ad84cb3379054a7b55392f28f022a1c756be733b",
 	"spectator_view.gd": "b703095d80d712e45655cf5f392ad4ad8c9642d5bde1f5a1990da441b703592f",
 	"steam_transport.gd": "b177678f5f3da233e8d2a161f1fe7e66db5b2e0ce20753b578091ad3d13ecca3",
 	"tier4_option.gd": "248bd5f66e0a59d7043cf7db3fa27bebb4f277c7b20b80f37bf4e2a10d9b1c36",
@@ -58,7 +60,7 @@ const MANIFEST := {
 	"transport.gd": "bc713149cff76d6d19947c367b4ebac8a3bb5932edfa432053c4622e6db2ec42",
 	"ui_theme.gd": "215477067a191f7b020065be0571dd4763648908ad6d70f3a9947b60ee4af90b",
 	"updater.gd": "16924fee72ff524db0ea402c9da026a2b43282ebb73226d1992285a0c2a4bbb6",
-	"whats_new.gd": "885d4f21bbf4782dd9a172b71ebd935663e8000a364d246308dce69c704abb53",
+	"whats_new.gd": "99428282b6608a4cf6bda1aafdce142bbd6fdae5a9297e28b6729918f458e604",
 }
 
 

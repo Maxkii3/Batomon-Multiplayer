@@ -6,7 +6,8 @@ BatoMulti is an unofficial Batomon Showdown multiplayer mod created and maintain
 [Maxkii3](https://github.com/Maxkii3). One player hosts a room: friends join with a short code or
 find it in the public **room browser**. Everyone builds their team in the shop at the same time, then
 battles round after round until only one trainer is left standing. Rooms hold up to 250 people, and
-you can join as a spectator to watch friends live.
+you can join as a spectator to watch friends live. Short on friends? Add **ghost bots** that play real
+players' boards from the game's own ranked ghosts.
 
 🏆 **Host a community tournament in one match.** One room seats up to **250 participants** (players +
 spectators). Everyone fights in the same match, round after round, until one champion is left; the live
@@ -43,7 +44,7 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/06_lobby_browser.png" alt="The Browse rooms tab: room name, host, players, spectators, status, speed, code and a lock on password rooms"><br><sub><b>Room browser</b> — find a public room: name, host, players, spectators, status and speed; 🔒 = password.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab: room code, Copy and Chat up top, host settings (Trainers row with Ban Trainer and Ban Batomon (3) Banned, Region Mixed lit) beside the member list, and the bottom action bar with Leave room, the ready count, Force Start and Start match"><br><sub><b>Your room</b> — room code + <b>Copy</b> up top, host settings beside the member list (<b>Player / Spectator</b>, <b>Kick</b>), and one action bar: <b>Leave room</b> · who's ready · <b>Force Start</b> + <b>Start match</b>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/02_lobby_room.png" alt="Room tab: room code, Copy and Chat up top, Host settings in three tabs (Content and Bans open: Region, Trainers and the four Ban buttons), the member list, and the bottom action bar with Leave room, the ready count, Force Start and Start"><br><sub><b>Your room</b> — room code + <b>Copy</b> up top, <b>Host settings</b> in three tabs (<b>Match</b> · <b>Players &amp; Bots</b> · <b>Content &amp; Bans</b>) beside the member list, and one action bar: <b>Leave room</b> · who's ready · <b>Force Start</b> + <b>Start</b>.</sub></td>
     <td width="50%"><img src="docs/screenshots/08_shop_overlay.png" alt="The shop with the live leaderboard and the next-opponent bar"><br><sub><b>Shop</b> — the live leaderboard and your <b>next opponent</b> while you build.</sub></td>
   </tr>
   <tr>
@@ -55,8 +56,8 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
     <td width="50%"><img src="docs/screenshots/07_results.png" alt="The results screen with every player's placement"><br><sub><b>Results</b> — final placements, then back to the menu with one click.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/09_region_host.png" alt="Host settings: Region Mixed, Pantra, Jinto (Jinto lit) and Events Same for all, Own luck (Same for all lit)"><br><sub><b>Region + Events</b> — the host picks <b>Mixed</b> (every region, 0.7.3), <b>Pantra</b> or <b>Jinto</b>, and <b>Same for all</b> events.</sub></td>
-    <td width="50%"><img src="docs/screenshots/10_region_guest.png" alt="A guest's room panel: the host's settings greyed out, Jinto and Same for all lit, Ready Up! button"><br><sub><b>Guests</b> see the host's region and event mode (locked), on joining and whenever they change.</sub></td>
+    <td width="50%"><img src="docs/screenshots/09_region_host.png" alt="The Content and Bans tab: Region Mixed, Pantra, Jinto (Jinto lit), Trainers Random 3 or Free pick, and the four Ban buttons"><br><sub><b>Region</b> — on the <b>Content &amp; Bans</b> tab the host picks <b>Mixed</b> (every region), <b>Pantra</b> or <b>Jinto</b>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/10_region_guest.png" alt="A guest's room panel: the host's settings greyed out, Jinto lit, Ready Up! button"><br><sub><b>Guests</b> see every host setting (locked) in the same tabs, on joining and whenever it changes.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/11_free_pick.png" alt="Free pick: the game's trainer cards three per row in a scrolling list"><br><sub><b>Free pick</b> — the host can let every player choose any trainer, three per row.</sub></td>
@@ -68,23 +69,43 @@ needs the same BatoMulti version and Steam running. This is a community mod, not
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/15_trainer_ban_window.png" alt="The Ban Trainer window in the off-white theme: trainer portraits, three of them greyed out with a red X"><br><sub><b>Trainer Bans</b> (0.7.0) — the host clicks portraits to ban them (greyed, red X); at least 3 always stay.</sub></td>
-    <td width="50%"><img src="docs/screenshots/16_trainer_ban_row.png" alt="Host settings: the Trainers row with Random 3, Free pick, Ban Trainer (3) Banned and Ban Batomon None"><br><sub>The Trainers row shows each ban list: <b>None</b> or <b>(n) Banned</b>; guests see the lists read-only.</sub></td>
+    <td width="50%"><img src="docs/screenshots/16_trainer_ban_row.png" alt="The Bans grid: Ban Trainer (3) Banned, Ban Batomon, Ban Trinket and Ban Item None"><br><sub>The <b>Bans</b> grid shows each list: <b>None</b> or <b>(n) Banned</b>; guests see the lists read-only.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/17_trainer_ban_free_pick.png" alt="Free pick: the banned Chemist card greyed out with a red X next to two open trainers"><br><sub><b>Free pick</b> — banned cards stay in place, greyed and locked; <b>Random 3</b> never offers them.</sub></td>
-    <td width="50%"><img src="docs/screenshots/18_chat_lobby.png" alt="The room tab with a yellow Chat button next to the room code and a NEW badge on it, Region Mixed lit"><br><sub><b>Room chat</b> (0.7.0) — the yellow <b>Chat</b> button next to the room code; <b>NEW</b> = unread lines.</sub></td>
+    <td width="50%"><img src="docs/screenshots/18_chat_lobby.png" alt="The room tab with a yellow Chat button next to the room code and a NEW badge on it"><br><sub><b>Room chat</b> (0.7.0) — the yellow <b>Chat</b> button next to the room code; <b>NEW</b> = unread lines.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/19_match_header.png" alt="The shop's top bar: a compact NEXT MATCH pill, the heart counter, Day 2, the chat bubble with a red pip; the leaderboard shows one player shopping and two ready"><br><sub><b>Cleaner header</b> (0.7.0) — compact, draggable <b>NEXT MATCH</b>, the hearts visible again, the chat bubble (pip = unread), and <b>ready</b> / <b>shopping</b> for every player.</sub></td>
     <td width="50%"><img src="docs/screenshots/20_chat_ingame.png" alt="The Room chat window open in the shop: join notices, three players' lines with times, the input field and Send"><br><sub><b>Chat in the match</b> — names, times, notices; any language; typing never presses the game's hotkeys.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti v0.7.3 window: four highlights and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
+    <td width="50%"><img src="docs/screenshots/21_whats_new.png" alt="The main menu with a What's New in BatoMulti window: ghost bots, why a bot is a different real player every Day, Trinket and Item bans, Day limit, tabs, bots fight on, and a yellow OK button"><br><sub><b>What's New</b> (0.7.1) — after an update, the new version's highlights once on the main menu.</sub></td>
     <td width="50%"><img src="docs/screenshots/24_trinket_grid.png" alt="Salvage Master in the off-white dialog: a scrolling grid of the player's trinkets, one framed, and the game's details box for Earth Crest beside it"><br><sub><b>Trinket picks</b> — your backpack as a scrolling grid with the game's details box (0.7.2), now in the clean white dialog (0.7.3).</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/22_batomon_ban_window.png" alt="The Ban Batomon window: search field, rarity tabs All to Legendary, Clear all, and a grid of unit pictures with rarity badges"><br><sub><b>Batomon Ban</b> (0.7.3) — the host bans units from the room's shops: pictures, rarity tabs, <b>Clear all</b>; 3 per rarity always stay.</sub></td>
     <td width="50%"><img src="docs/screenshots/23_batomon_ban_search.png" alt="The Ban Batomon window with pu typed: suggestion chips Puffloon, Venopuff, Pompummel and the matching units below"><br><sub><b>Live search</b> — the list filters as you type, small typos are forgiven, and <b>suggestions</b> complete the name.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/25_players_and_bots.png" alt="The Players and Bots tab: Max players, Spectators, Add bot, Ghost level Master; Bot 1 (Silver) and Bot 2 (Master) in the member list, ready, with Kick"><br><sub><b>Ghost bots</b> (new in 0.7.4) — pick a level, press <b>Add bot</b>: each bot keeps its own, shown in its name (<b>Bot 1 (Silver)</b>, <b>Bot 2 (Master)</b>); <b>Kick</b> removes it.</sub></td>
+    <td width="50%"><img src="docs/screenshots/26_ghost_level.png" alt="The Ghost level dropdown open: Auto (my rank), Bronze, Silver, Gold, Platinum, Diamond, Master"><br><sub><b>Ghost level</b> — the next bot's level: <b>Auto</b> (your own rank) or a tier from <b>Bronze</b> up to <b>Master</b>.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/28_content_bans.png" alt="The Content and Bans tab: Region, Trainers and the Bans grid with Ban Trinket (3) Banned and Ban Item (2) Banned"><br><sub><b>Trinket + Item bans</b> (new in 0.7.4) — two more buttons in the <b>Bans</b> grid.</sub></td>
+    <td width="50%"><img src="docs/screenshots/29_trinket_ban.png" alt="The Ban Trinket window: search, rarity tabs All to Mythical, Clear all, and trinket pictures with three of them crossed out"><br><sub><b>Ban Trinket</b> — pictures, search and rarity tabs; banned trinkets never show up in gifts, events or rewards.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/30_item_ban.png" alt="The Ban Item window: Cake crossed out, the shop's items with rarity badges"><br><sub><b>Ban Item</b> — banned items never roll in the shop's item slot.</sub></td>
+    <td width="50%"><img src="docs/screenshots/27_day_limit.png" alt="The Match tab: shop timer, lives, On a tie, Day limit 37 Days, battle speed and events"><br><sub><b>Day limit</b> (new in 0.7.4) — type how many Days a match lasts (0 = no limit); then the most lives wins.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/31_only_bots_left.png" alt="An eliminated player's screen: Only bots are left: they fight on to the last one, with the leaderboard"><br><sub><b>Bots fight on</b> — when only bots are left they play to the last one; you watch the standings until the winner.</sub></td>
+    <td width="50%"><img src="docs/screenshots/32_bot_night_lobby.png" alt="In the game: a room named Bot Night with the host, Bot 1 (Silver), Bot 2 (Gold), Bot 3 (Master), all ready, and a friend; Day limit 12 Days"><br><sub><b>A room with bots</b> — the host, a friend and three bots of different levels (Silver, Gold, Master); bots are ready at once.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/33_bot_night_results.png" alt="Game over at Round 9 of 12: Bot 3 (Master) wins with 1 life, then the host, a friend, Bot 1 (Silver) and Bot 2 (Gold)"><br><sub><b>Results</b> — bots are ranked like everyone else (here the Master bot won on Day 9 of 12).</sub></td>
+    <td width="50%"><img src="docs/screenshots/34_bot_night_shop.png" alt="The shop on Day 4: the leaderboard Round 4/12 lists Bot 2 (Gold), Bot 3 (Master), the host, a friend and Bot 1 (Silver) with lives, wins and ready"><br><sub><b>In the match</b> — the leaderboard (and NEXT MATCH) name each bot's level; the header counts toward the <b>Day limit</b> (Round 4/12).</sub></td>
   </tr>
 </table>
 
@@ -113,6 +134,24 @@ see the unofficial-mod disclaimer below.
 
 ## ✨ Cool features
 
+- **Ghost bots** *(new in 0.7.4)* — no full room? The host picks a **Ghost level** and presses **Add bot**
+  (on the **Players & Bots** tab) to seat a bot; every bot keeps the level it was added with, so one room
+  can mix them (say a Silver bot and a Master bot). Each round a bot plays a **real player's board** from the game's own ranked ghosts,
+  fetched the same way ranked play does, so the bots stay up to date with every game patch. Every round
+  brings a different real player; the bot keeps its own lives and wins. Levels: **Auto** (your own rank) or
+  **Bronze**, **Silver**, **Gold**, **Platinum**, **Diamond**, **Master**. Every bot's name shows its level
+  everywhere (lobby, leaderboard, results): **Bot 1 (Silver)**, **Bot 2 (Master)**, or on Auto the host's
+  rank, **Bot 3 (Auto: Diamond)**. Past **Day 16** the bots take their boards from the game's **Endless** ghosts, so they keep
+  getting stronger as the Days go on (a new player every Day, [why](#is-a-bot-the-same-player-from-day-1-to-the-end)).
+  When only bots are left, they **fight on** to the last one.
+- **Trinket and Item bans** *(new in 0.7.4)* — **Ban Trinket** and **Ban Item** next to Ban Trainer and Ban
+  Batomon: the same picture grid, search and rarity tabs. A banned trinket never comes up in gifts, events
+  or rewards; a banned item never rolls in the shop's item slot. A few per rarity always stay.
+- **Day limit** *(new in 0.7.4)* — type the number of Days a match lasts (**0** = no limit). On the last Day
+  the player with the most lives (then wins) takes the match; the leaderboard shows **Round n/limit**.
+- **Host settings in tabs** *(new in 0.7.4)* — the room's settings sit in three tabs: **Match** (timer, lives,
+  ties, Day limit, speed, events), **Players & Bots** (room size, bots) and **Content & Bans** (region,
+  trainers, every ban list).
 - **Ready for game 1.5.0** *(fixed in 0.7.3)* — gift trinkets work with the game's 1.5.0 patch, also the
   new **Burglar**'s stolen trinket (its own card with **Confirm**), in single-player and in rooms. Room
   battles wait until their result is saved before leaving the battle screen, as the game now does.
@@ -228,12 +267,13 @@ see the unofficial-mod disclaimer below.
 - **Auto-reconnect** — if someone's connection drops (or the game crashes), they jump right back in:
   restart the game and it rejoins the match by itself, back in your shop with your run. A dropped
   player shows as OFFLINE and never holds up the others. If the host leaves, someone else takes over and
-  the match keeps going; if everyone else leaves, the last player standing wins at once.
+  the match keeps going (bots included); if every other player leaves and no bot is left, the last player
+  standing wins at once.
 - **Back to room** — after the results, play another match in the same room with one click.
 
 ## 📥 How to install
 
-1. **Download `BatoMulti-Setup-0.7.3.cmd`** from the [Releases](../../releases) page.
+1. **Download `BatoMulti-Setup-0.7.4.cmd`** from the [Releases](../../releases) page.
 2. **Close Batomon Showdown**, then **double-click the file** and press Enter.
    It finds your game automatically and takes care of backups.
 3. **Launch the game through Steam** — the main menu now has a **Multiplayer** button. Join a room!
@@ -252,7 +292,7 @@ check stays silent and the game starts as usual. To turn the check off, add `[up
 
 ### Manual install (zip, no setup file)
 
-Prefer a zip? Download **`BatoMulti-v0.7.3-ManualInstall.zip`** from the [Releases](../../releases) page
+Prefer a zip? Download **`BatoMulti-v0.7.4-ManualInstall.zip`** from the [Releases](../../releases) page
 (it is also the file for mod sites). The zip holds only plain text: the `batomulti` folder (the mod's `.gd` scripts),
 `override.cfg` and a `README.txt`. There is nothing to run.
 
@@ -269,19 +309,25 @@ Prefer a zip? Download **`BatoMulti-v0.7.3-ManualInstall.zip`** from the [Releas
 > The setup file checks all of this for you; the zip can't.
 
 To remove a manual install, delete `batomulti` and `override.cfg` (or restore your backup) — see
-[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.3 only joins
-0.7.3 rooms. A manual install does not update itself through the setup; download the new zip (or the
+[How to uninstall](#-how-to-uninstall). Rooms need the exact same version: 0.7.4 only joins
+0.7.4 rooms. A manual install does not update itself through the setup; download the new zip (or the
 setup file) when a new version is out.
 
 ## 🎮 How to play with friends
 
 Everyone needs BatoMulti installed (same version) and Steam running.
 
-- **Host:** Multiplayer → give the room a name (and a password if you want) → pick the shop timer,
-  lives, battle speed (4x by default), trainers (**Random 3** or **Free pick**), region (**Mixed**, **Pantra**
-  or **Jinto**), **Ban Trainer** / **Ban Batomon**, events (**Same for all** or **Own luck**) and room size → keep the random **room code** or type your own (4-8 letters /
-  digits) → **Create room** → press **Copy** and send the code to your friends → **Start match** once
-  everyone is ready (or **Force Start** → **Confirm Force Start?** to go without waiting).
+- **Host:** Multiplayer → give the room a name (and a password if you want) → set the room in the three
+  **Host settings** tabs:
+  - **Match:** shop timer, lives, ties, **Day limit**, battle speed (4x by default), events (**Same for all**
+    or **Own luck**)
+  - **Players & Bots:** room size, then for each bot a **Ghost level** + **Add bot**
+  - **Content & Bans:** region (**Mixed**, **Pantra** or **Jinto**), trainers (**Random 3** or **Free pick**),
+    **Ban Trainer** / **Ban Batomon** / **Ban Trinket** / **Ban Item**
+
+  → keep the random **room code** or type your own (4-8 letters / digits) → **Create room** → press
+  **Copy** and send the code to your friends → **Start match** once everyone is ready (or **Force Start** →
+  **Confirm Force Start?** to go without waiting).
 - **Friends:** Multiplayer → type the code → **Join**. Or open **Browse rooms**, find the room and
   press **Join** (enter the password if it shows a 🔒). Then press **Ready Up!**.
 - **Player or Spectator:** the member list on the right of the lobby shows everyone (it scrolls in
@@ -298,6 +344,32 @@ Everyone needs BatoMulti installed (same version) and Steam running.
 Yes. With BatoMulti installed, open **Multiplayer** from the main menu. One player creates
 a room and shares the room code; friends enter that code to join. Add a password and only
 people who know it can get in, even from the room browser. A match needs at least two players. See [How to play with friends](#-how-to-play-with-friends) for the host settings.
+
+### Can I play against bots?
+
+Yes. In your room open **Players & Bots**, pick a **Ghost level** and press **Add bot**, once per bot:
+each bot keeps its own level, so you can mix easy and hard bots. A bot plays a real player's board from the
+game's ranked ghosts each round (a new player every round): **Auto** follows your own rank, **Master** is
+the hardest. One player plus bots is enough to start
+a match, and the bots fight on to the end if every player is knocked out.
+
+### Where do the bots' teams come from?
+
+From the same ghost download the game uses for ranked play, so they always match the current patch.
+Bots only read those ghosts: a room never uploads a board, and ranked play is untouched.
+
+### Is a bot the same player from Day 1 to the end?
+
+No, on purpose. A bot keeps its own lives and wins, but every Day it plays a **different real player** of
+the chosen level. The game's ghost files keep only a few Days of each player's run (many runs have only
+one Day (44%), under 5% have Days 1-10, almost none reach Day 16), so one player's run could not last a match.
+A fresh player every Day keeps the bot exactly as strong as that Day is, with no gaps, and BatoMulti only
+uses what the game already downloads. Details in the [release notes](RELEASE_NOTES.md).
+
+### Can I make a match shorter?
+
+Yes. Type a **Day limit** on the **Match** tab. When the match reaches that Day, the player with the most
+lives (then the most wins) is the winner. **0** means no limit.
 
 ### Which platforms does this Batomon multiplayer mod support?
 
@@ -343,12 +415,12 @@ For mod support, [open an issue in this repository](https://github.com/Maxkii3/B
 **With the setup file (recommended)**
 
 1. Close Batomon Showdown.
-2. Double-click `BatoMulti-Setup-0.7.3.cmd` again. When BatoMulti is installed, the same file
+2. Double-click `BatoMulti-Setup-0.7.4.cmd` again. When BatoMulti is installed, the same file
    uninstalls it (it asks first). Or run it from a command prompt with an explicit action:
    ```
-   BatoMulti-Setup-0.7.3.cmd uninstall
-   BatoMulti-Setup-0.7.3.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
-   BatoMulti-Setup-0.7.3.cmd status
+   BatoMulti-Setup-0.7.4.cmd uninstall
+   BatoMulti-Setup-0.7.4.cmd uninstall "D:\SteamLibrary\steamapps\common\Batomon Showdown"
+   BatoMulti-Setup-0.7.4.cmd status
    ```
 3. It removes the `batomulti` folder and BatoMulti's `override.cfg`, and puts back any mod it had set
    aside (checked byte for byte). Your saves are not touched.
@@ -388,5 +460,5 @@ at any time.
 ---
 
 <sub>BatoMulti is an unofficial fan-made mod for Batomon Showdown (Steam, Windows). Multiplayer rooms run over
-Steam between friends; matches never touch ranked play, ghosts or your saved runs.</sub>
+Steam between friends; matches never touch ranked play or your saved runs, and never upload ghosts (bots only read the game's own ranked ghosts).</sub>
 

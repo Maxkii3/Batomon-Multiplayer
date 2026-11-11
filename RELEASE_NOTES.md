@@ -1,3 +1,65 @@
+# BatoMulti 0.7.4 — Ghost bots, Trinket & Item bans, Day limit
+
+Play with bots when the room is short of friends, plus three new host settings.
+
+**Updating from 0.6.2-0.7.3:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.4: 0.7.3 and 0.7.4 players can't share a room.
+Built and tested on Batomon Showdown **1.5.0**.
+
+## 🤖 Ghost bots
+
+- Pick a **Ghost level** and press **Add bot** (host, **Players & Bots** tab) to seat a bot. Every bot keeps
+  the level it was added with, so a room can mix levels (a Silver bot and a Master bot). A bot is always
+  ready; **Kick** removes it, and it stays in the room after **Back to room**.
+- Each round a bot plays a **real player's board** from the game's own ranked ghosts: the same ghost
+  download the game uses for ranked play, so bots always match the current patch. Bots only read those
+  ghosts; a room never uploads a board.
+- **Ghost level:** **Auto** (your own rank) or a fixed tier: **Bronze**, **Silver**, **Gold**, **Platinum**,
+  **Diamond**, **Master**. With a fixed tier the game downloads that tier's ghost files in the background
+  the first round.
+- Every bot's **name shows its level** for everyone, in the lobby, the leaderboard, NEXT MATCH and the
+  results: **Bot 1 (Silver)**, **Bot 2 (Master)**; on Auto the host's own rank, **Bot 3 (Auto: Diamond)**.
+- **Past Day 16** the bots take their boards from the game's **Endless** ghosts, so they keep getting
+  stronger as the Days go on.
+- **When only bots are left, they fight on** to the last one. Knocked-out players see the standings and a
+  note while the bots finish the match.
+
+### Why a bot meets you with a different player every Day
+
+A bot keeps its own lives and wins for the whole match, but its board comes from a **different real
+player every Day**, not from one player's run growing Day after Day. That is on purpose:
+
+- The game's ghost files are a **sample**: one saved board per player per Day, and only a few Days of each
+  run. In the files we checked (about 9,000 ranked runs, both regions), **44%** of the runs have a
+  single Day, **under 5%** have every Day from 1 to 10, and **almost none** have Days 1 to 16. Hardly any
+  run continues into the Endless Days.
+- So "the same player growing" would last a few Days at most, then have to switch players or reuse an
+  old board anyway (a bot that stops growing).
+- Asking the game's server for one player's whole run is something the game itself never does. BatoMulti
+  only uses what the game already downloads, so it stays away from anything server-sided.
+- A fresh player of the chosen tier every Day keeps every bot at the strength that Day really has, with
+  no gaps.
+
+## 🚫 Trinket and Item bans (host)
+
+- **Ban Trinket** and **Ban Item** join Ban Trainer and Ban Batomon in the **Bans** grid: pictures, search,
+  rarity tabs and **Clear all**, like Ban Batomon.
+- A banned trinket never comes up in gifts, events or battle rewards; a banned item never rolls in the
+  shop's item slot. Each rarity always keeps a few (3 trinkets, 1 item).
+- Guests see the lists read-only; each row shows **None** or **(n) Banned**.
+
+## 📅 Day limit (host)
+
+- Type how many Days a match lasts (**0** = no limit). After that Day's battles the match ends: the player
+  with the most lives wins (then the most wins). The leaderboard shows **Round n/limit**.
+
+## 🗂️ Host settings in tabs
+
+- The room settings sit in three tabs: **Match** (shop timer, lives, ties, Day limit, battle speed,
+  events), **Players & Bots** (room size, bots) and **Content & Bans** (region, trainers, every ban list).
+
+---
+
 # BatoMulti 0.7.3 — Batomon Showdown 1.5.0 update, Mixed region, Batomon Ban
 
 An update for the Batomon Showdown **1.5.0** patch (2026-11-07), plus two new host settings.

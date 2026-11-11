@@ -178,6 +178,9 @@ func header_text() -> String:
 	if client == null:
 		return ""
 	var head := "Round %d" % client.state.round_n
+	var limit := int(client.state.settings.get("day_limit", 0))
+	if limit > 0:
+		head += "/%d" % limit                       # the room's Day limit: last round = limit
 	if client.seconds_left() > 0.0:
 		var s := int(ceil(client.seconds_left()))
 		head += " · shop %d:%02d" % [s / 60, s % 60]

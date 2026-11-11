@@ -23,8 +23,9 @@ const TrainerBan := preload("res://batomulti/trainer_ban.gd")
 const UiTheme := preload("res://batomulti/ui_theme.gd")
 const MIN_LEFT := 3                  # per rarity: a shop roll falling on an empty rarity would drop a tier or leave a hole
 const RARITIES := ["Common", "Uncommon", "Rare", "Super Rare", "Legendary"]     # tier 1..5
-const RARITY_SHORT := ["C", "U", "R", "SR", "L"]
-const RARITY_COLOR := [Color("#66707a"), Color("#2f7d12"), Color("#0a6fa8"), Color("#8a3aa0"), Color("#b06400")]   # readable on the white sheet
+const RARITY_SHORT := ["C", "U", "R", "SR", "L", "M"]
+const RARITY_COLOR := [Color("#66707a"), Color("#2f7d12"), Color("#0a6fa8"), Color("#8a3aa0"), Color("#b06400"), Color("#b0263a")]   # readable on the white sheet (M = Mythical: trinket / item bans)
+const ALL_RARITIES := ["Common", "Uncommon", "Rare", "Super Rare", "Legendary", "Mythical"]
 const COLUMNS := 9
 const TILE := Vector2(48, 58)
 const SPRITE := Vector2(40, 40)
@@ -48,6 +49,7 @@ var note: Label
 var clear_btn: Button
 var close_btn: Button
 var grid: GridContainer
+var title_label: Label
 var _set_id := "-"
 var _order: Array = []               # species ids in rarity + name order
 var _hint := ""
@@ -134,6 +136,36 @@ static func match_score(query: String, unit_name: String) -> int:
 	return 0
 
 
+## What the window lists (content_ban.gd: trinkets / items): every entry of the region, its id / name / tier /
+## picture, the rarity tabs, the title and the words of the hint.
+func entries(set_id: String) -> Array:
+	return roster(set_id)
+
+
+func entry(id: String):
+	return GameDatabase.get_species_by_id(id)
+
+
+func picture(e) -> Texture2D:
+	return e.texture
+
+
+func rarities() -> Array:
+	return RARITIES
+
+
+func title_text() -> String:
+	return "Ban Batomon"
+
+
+func noun() -> String:
+	return "Batomon"
+
+
+func hint_text() -> String:
+	return "Click a unit to ban it from the shop (%d per rarity stay)" % MIN_LEFT
+
+
 func _init() -> void:
 	theme = UiTheme.get_theme()
 	theme_type_variation = "BmSheet"
@@ -146,7 +178,8 @@ func _init() -> void:
 	strip.theme_type_variation = "BmStrip"
 	strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var title := Label.new()
-	title.text = "Ban Batomon"
+	title.text = title_text()
+	title_label = title
 	title.theme_type_variation = "BmTitle"
 	strip.add_child(title)
 	head.add_child(strip)
@@ -167,9 +200,9 @@ func _init() -> void:
 		if not _best.is_empty():
 			_complete(str(_best[0])))
 	filters.add_child(search)
-	for i in RARITIES.size() + 1:
+	for i in rarities().size() + 1:
 		var b := Button.new()
-		b.text = "All" if i == 0 else RARITIES[i - 1]
+		b.text = "All" if i == 0 else rarities()[i - 1]
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(func(): show_tab(i))
 		tab_buttons.append(b)
@@ -221,14 +254,14 @@ func show_bans(set_id: String, p_bans: Array, p_editable: bool) -> void:
 		_build(set_id)
 	editable = p_editable
 	bans = p_bans
-	_hint = ("Click a unit to ban it from the shop (%d per rarity stay)" % MIN_LEFT) if editable \
+	_hint = hint_text() if editable \
 		else "Only the host can change the bans"
 	clear_btn.visible = editable
 	for id in tiles:
 		var b: Button = tiles[id]
 		TrainerBan.mark(b, id in bans)   # shortcut: one back-buffer copy per banned tile, fine for tens of bans; plain modulate if a long list ever lags
-		var s = GameDatabase.get_species_by_id(id)
-		b.tooltip_text = "%s (%s)%s" % [s.name, RARITIES[int(s.tier) - 1], " - banned from the shop" if id in bans else ""]
+		var s = entry(id)
+		b.tooltip_text = "%s (%s)%s" % [s.name, ALL_RARITIES[int(s.tier) - 1], " - banned" if id in bans else ""]
 	_filter()
 
 
@@ -253,7 +286,7 @@ func _filter() -> void:
 	var query := search.text.strip_edges()
 	var scored: Array = []
 	for id in _order:
-		var s = GameDatabase.get_species_by_id(id)
+		var s = entry(id)
 		var fit := match_score(query, str(s.name))
 		if fit == 0 and query.length() >= 2:
 			fit = 60 if str(id).contains(query.to_lower()) else 0
@@ -271,20 +304,20 @@ func _filter() -> void:
 		grid.move_child(tiles[id], at)
 		at += 1
 	var chips: Array = [] if query == "" else _best.slice(0, MAX_SUGGESTIONS)
-	if chips.size() == 1 and match_score(query, str(GameDatabase.get_species_by_id(chips[0]).name)) == 100:
+	if chips.size() == 1 and match_score(query, str(entry(chips[0]).name)) == 100:
 		chips = []                                         # already complete
 	for i in suggestion_buttons.size():
 		suggestion_buttons[i].visible = i < chips.size()
 		if i < chips.size():
-			suggestion_buttons[i].text = str(GameDatabase.get_species_by_id(chips[i]).name)
+			suggestion_buttons[i].text = str(entry(chips[i]).name)
 	note.visible = chips.is_empty()
 	note.get_parent().get_node("ChipGap").visible = not chips.is_empty()
-	note.text = ("No Batomon matches \"%s\"" % query) if _best.is_empty() else _hint
+	note.text = ("No %s matches \"%s\"" % [noun(), query]) if _best.is_empty() else _hint
 
 
 ## A suggestion taken (click or Enter): the field holds the whole name, the list shows that unit.
 func _complete(id: String) -> void:
-	search.text = str(GameDatabase.get_species_by_id(id).name)
+	search.text = str(entry(id).name)
 	search.caret_column = search.text.length()
 	_filter()
 
@@ -298,7 +331,7 @@ func _build(set_id: String) -> void:
 	names.clear()
 	badges.clear()
 	_order.clear()
-	for s in roster(set_id):
+	for s in entries(set_id):
 		var id := str(s.id)
 		var rarity := int(s.tier) - 1
 		var b := Button.new()
@@ -315,7 +348,7 @@ func _build(set_id: String) -> void:
 		pic.custom_minimum_size = SPRITE
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.texture = s.texture
+		pic.texture = picture(s)
 		pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		col.add_child(pic)
 		var name_l := Label.new()

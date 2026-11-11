@@ -38,10 +38,15 @@ const MIGRATION_MIN_SHOP := 15.0 # shop time left after a host migration, at lea
 ## whole lobby): the client takes Scaled Gold by itself after COMEBACK_PICK_SECONDS (batomulti.gd); the
 ## room opens the next round without such a player after COMEBACK_CAP at the latest (a client that never
 ## auto-picks), and never waits for battle reports from a player that was not at the shop.
+## Only bots left alive: their rounds need nobody, so the room opens each one itself after this pause (the
+## eliminated players and spectators see the standings move round by round instead of in one flash).
+const BOTS_ONLY_PAUSE := 3.0
 const COMEBACK_PICK_SECONDS := 60.0
 const COMEBACK_CAP := 70.0
 
 signal log_line(text: String)
+## The shop opened: the game glue fetches a ghost board for each of these bots, then calls bot_board().
+signal bots_need_boards(round_n: int, ids: Array)
 
 var t                            # transport
 var state = LobbyState.new()
@@ -86,6 +91,8 @@ var _guard_sig := ""
 var _info_last: Dictionary = {}
 var _info_at := -1000.0
 var _boards: Dictionary = {}      # id -> packed board dict for the current round
+var _bot_waived: Dictionary = {}  # bot id -> true: no ghost this round (fetch failed), it never holds the ready barrier
+var auto_tier := ""                 # the host's rank tier (set_auto_tier): the label of a bot on Auto
 const CHAT_BURST := 5             # chat lines per member per CHAT_WINDOW s (more = dropped: no flood)
 const CHAT_WINDOW := 5.0
 var _chat_times: Dictionary = {}   # member id -> its recent chat line times (flood check)
@@ -163,6 +170,7 @@ func configure(settings: Dictionary) -> void:
 	if state.phase != "lobby":
 		return
 	state.apply_settings(_take_private(settings))
+	state.label_bots(auto_tier)
 	var limit := LobbyState.member_limit(state.settings)
 	if t != null and t.member_limit != limit:
 		t.set_member_limit(limit)
@@ -170,6 +178,8 @@ func configure(settings: Dictionary) -> void:
 
 
 func _send(to: int, type: String, body := {}) -> void:
+	if LobbyState.is_bot(to):
+		return                                  # a bot seat has nobody on the network
 	t.send(to, P.encode(type, body))
 
 
@@ -373,6 +383,9 @@ func _check_password(from: int, pw: String) -> String:
 func kick(id: int) -> bool:
 	if id == t.self_id or not state.seats.has(id) or banned.has(id):
 		return false
+	if LobbyState.is_bot(id):
+		_drop(id, "was removed by the host")       # a bot is only taken out: no ban, no KICK message
+		return true
 	banned[id] = true
 	_bump("kicks")
 	_send(id, P.KICK, {"why": KICKED})
@@ -380,6 +393,43 @@ func kick(id: int) -> bool:
 	_drop(id, "was kicked by the host")
 	_push_guard(true)
 	return true
+
+
+## Host only, lobby: a ghost bot takes a free player seat. -> its id, 0 = the room has no free player seat.
+## The host's own rank tier ("master", ...): what a bot on Auto plays at; set by the game glue.
+func set_auto_tier(tier: String) -> void:
+	if tier == auto_tier:
+		return
+	auto_tier = tier
+	if state.label_bots(auto_tier):
+		_broadcast_lobby()
+
+
+func add_bot(level := "") -> int:
+	var id: int = state.add_bot(level)
+	if id != 0:
+		state.label_bots(auto_tier)
+		_bump("bots_added")
+		_broadcast_lobby()
+		publish_room_info(true)
+	return id
+
+
+## The game glue's answer to bots_need_boards: `board` = the ghost's to_opponent_dictionary(), {} = none
+## found (the bot fights its last board, else a copy of a player's board: _resolve). Late / stale = ignored.
+func bot_board(id: int, r: int, board: Dictionary) -> void:
+	if state.phase != "shop" or r != state.round_n or not (id in state.alive_ids()) or not LobbyState.is_bot(id) or _boards.has(id):
+		_bump("bot_board_late")
+		return
+	if board.is_empty() or not board.has("team"):
+		_bump("bot_board_none")
+		_bot_waived[id] = true
+		_log("%s: no ghost found for round %d" % [state.seats[id].name, r])
+	else:
+		_boards[id] = P.pack_board(board)
+		state.seats[id].ready = true
+		_broadcast_lobby(true)
+	_check_all_ready()
 
 
 ## The password, the ban list and the lockouts go to the members that would take over as host.
@@ -458,7 +508,7 @@ func publish_room_info(force := false) -> void:
 
 ## The transport lost this member (crash, network). Not a LEAVE: the seat waits for a rejoin.
 func peer_disconnected(id: int) -> void:
-	if not state.seats.has(id) or state.seats[id].status == LobbyState.LEFT:
+	if LobbyState.is_bot(id) or not state.seats.has(id) or state.seats[id].status == LobbyState.LEFT:
 		return
 	if state.phase == "lobby":
 		_drop(id, "disconnected")
@@ -606,12 +656,17 @@ func _on_back(from: int, nm: String) -> void:
 ## The finished match's room becomes a fresh lobby: same code, settings, password and bans; no seats
 ## (members are seated as they come back), every match record cleared, joinable again.
 func reopen_lobby() -> void:
+	var bots := 0
 	for id in state.seats:
-		if not banned.has(id):
+		if LobbyState.is_bot(id):
+			bots += 1
+		elif not banned.has(id):
 			_alumni[id] = str(state.seats[id].name)
 	state.seats = {}
 	state.phase = "lobby"
 	state.round_n = 0
+	for i in bots:
+		state.add_bot()                          # the bots stay in the reopened room (fresh seats)
 	for d in [_boards, _last_board, _runs, _last_opp, _byes, _reported, _inflight, _dc_since, _shop_views, _shop_sent,
 			_watch, _flushed, _dirty, _relay_at, _seen]:
 		d.clear()
@@ -866,9 +921,13 @@ func _check_open() -> void:
 		_game_over()                          # a sole survivor never waits at the round barrier
 		return
 	var alive := state.alive_ids()
+	if alive.all(func(id): return LobbyState.is_bot(id)):
+		if now - _phase_since >= BOTS_ONLY_PAUSE:      # only bots left: they fight on, the room opens their rounds itself
+			_open_shop(float(state.settings.shop_seconds))
+		return
 	var present := 0
 	for id in alive:
-		if not state.is_connected_seat(id):
+		if not state.is_connected_seat(id) or LobbyState.is_bot(id):
 			continue
 		if int(state.seats[id].at_shop) != state.round_n:
 			return
@@ -887,7 +946,7 @@ func _open_without_late() -> void:
 	var late: Array = []
 	var present := 0
 	for id in state.alive_ids():
-		if not state.is_connected_seat(id):
+		if not state.is_connected_seat(id) or LobbyState.is_bot(id):
 			continue
 		if int(state.seats[id].at_shop) == state.round_n:
 			present += 1
@@ -904,7 +963,7 @@ func _open_without_late() -> void:
 	_migrated_shop = 0.0
 	_open_shop(secs)
 	for id in state.alive_ids():
-		if state.is_connected_seat(id) and int(state.seats[id].at_shop) != state.round_n:
+		if state.is_connected_seat(id) and not LobbyState.is_bot(id) and int(state.seats[id].at_shop) != state.round_n:
 			_late_ids.append(id)
 
 
@@ -912,7 +971,7 @@ func _open_without_late() -> void:
 func _only_comebacks_late() -> bool:
 	var any := false
 	for id in state.alive_ids():
-		if not state.is_connected_seat(id) or int(state.seats[id].at_shop) == state.round_n:
+		if not state.is_connected_seat(id) or LobbyState.is_bot(id) or int(state.seats[id].at_shop) == state.round_n:
 			continue
 		if int(state.seats[id].get("sc_round", -1)) != state.round_n - 1:
 			return false
@@ -926,12 +985,16 @@ func _open_shop(seconds: float) -> void:
 	_deadline = now + seconds
 	_forced_at = -1.0
 	_boards.clear()
+	_bot_waived.clear()
 	_late_ids = []
 	for id in state.seats:
 		state.seats[id].ready = false
 	_announce_pairs()
 	_broadcast(P.ROUND_OPEN, {"round": state.round_n, "seconds": seconds})
 	_broadcast_lobby()
+	var bots: Array = state.alive_ids().filter(func(id): return LobbyState.is_bot(id))
+	if not bots.is_empty():
+		bots_need_boards.emit(state.round_n, bots)
 
 
 ## Next-match preview (operator 2026-10-05: who do I fight next?). The pairing is deterministic from
@@ -1000,7 +1063,7 @@ func _check_all_ready() -> void:
 	if state.phase != "shop":
 		return
 	for id in state.alive_ids():
-		if _boards.has(id):
+		if _boards.has(id) or _bot_waived.has(id):
 			continue
 		if state.is_connected_seat(id) or now - float(_dc_since.get(id, now)) < SHOP_DC_WAIT:
 			return
@@ -1011,8 +1074,12 @@ func _resolve() -> void:
 	if state.phase != "shop" or _end_if_over():
 		return
 	var boards := {}
+	var no_ghost: Array = []
 	for id in state.alive_ids():
 		var pb = _boards.get(id, _last_board.get(id))
+		if pb == null and LobbyState.is_bot(id):
+			no_ghost.append(id)                  # never had a ghost: a copy of a player's board (below)
+			continue
 		if pb == null:
 			_log("%s has no board -> forfeit" % state.seats[id].name)
 			stats.forfeits += 1
@@ -1027,8 +1094,18 @@ func _resolve() -> void:
 		boards[id] = {"packed": pb, "dict": dict}
 		var bb = dict.get("blackboard")
 		var spent = bb.get("bm_lives_spent", 0) if bb is Dictionary else 0
-		if _boards.has(id) and (spent is int or spent is float):
+		if _boards.has(id) and not LobbyState.is_bot(id) and (spent is int or spent is float):
 			state.spend_lives(id, int(spent))       # Red Coin: the room's lives are the host's
+	var humans: Array = boards.keys().filter(func(id): return not LobbyState.is_bot(id))
+	humans.sort()
+	for id in no_ghost:
+		if humans.is_empty():
+			state.forfeit(id)
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = ("bm|botcopy|%d|%d|%d" % [state.lobby_seed, state.round_n, id]).hash()
+		boards[id] = boards[humans[rng.randi_range(0, humans.size() - 1)]]
+		_bump("bot_board_copied")
 	if _end_if_over():
 		return                                  # the forfeits left one player: no round to fight
 	var fighters: Array = boards.keys()
@@ -1065,7 +1142,8 @@ func _run_battles(body: Dictionary, count_byes: bool) -> void:
 	_reported.clear()
 	_fighting = []
 	for id in dicts:
-		_fighting.append(int(id))
+		if not LobbyState.is_bot(id):
+			_fighting.append(int(id))           # a bot's battles are settled here: it never reports
 	_fighting.sort()
 	for p in body.pairs:
 		var r: Dictionary = resolver.call(dicts[int(p[0])], dicts[int(p[1])], state.round_n, int(p[2]))
@@ -1111,6 +1189,10 @@ func _finish_round() -> void:
 	_last_results = results
 	_broadcast_state(P.STANDINGS, {"round": state.round_n, "results": results, "state": _stamped()})
 	if state.is_over():
+		_game_over()
+		return
+	if state.day_limit_reached():
+		chat_notice("Day limit reached (Day %d): most lives wins" % state.round_n)
 		_game_over()
 		return
 	state.round_n += 1
@@ -1229,7 +1311,7 @@ static func from_snapshot(p_t, snap: Dictionary, inflight: Dictionary, shop_left
 	h._last_results = snap.results.duplicate(true)
 	for id in h.state.seats:
 		h.state.seats[id].ready = false
-		if int(id) != int(p_t.self_id) and not (int(id) in p_t.members()):
+		if int(id) != int(p_t.self_id) and not (int(id) in p_t.members()) and not LobbyState.is_bot(id):
 			h.state.set_connected(int(id), false)
 	if h.state.seats.has(lost) and h.state.seats[lost].status != LobbyState.LEFT:
 		h.state.set_connected(lost, false)

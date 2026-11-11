@@ -23,6 +23,12 @@ const KEY := "seen"
 const WIDTH := 300.0
 ## Highlights per version (newest first in each list). A version without an entry shows no popup.
 const NOTES := {
+	"0.7.4": [
+		"Ghost bots: pick a level (Auto = your rank, up to Master) and Add bot. Each bot keeps its own level, shown in its name: Bot 1 (Silver), Bot 2 (Master). Past Day 16 they use Endless ghosts.",
+		"A bot meets you with a different real player every Day: the game's ghost files keep only a few Days of each run (many runs only 1 Day, under 5% Days 1-10), so one player could not last a match.",
+		"Host bans for Trinkets and Items, a typed Day limit (most lives wins), and the host settings in three tabs.",
+		"When only bots are left, they fight on to the last one.",
+	],
 	"0.7.3": [
 		"Updated for Batomon Showdown 1.5.0: gift trinkets (also the Burglar's new stolen trinket) work in single-player and multiplayer.",
 		"Host Region \"All\" is now \"Mixed\": every region's Batomon in one shop pool.",

@@ -21,6 +21,8 @@ const MatchClient := preload("res://batomulti/match_client.gd")
 
 signal host_took_over(epoch: int)
 signal log_line(text: String)
+## A host of this session wants ghost boards for its bots (match_host.bots_need_boards; the game glue answers).
+signal bots_need_boards(round_n: int, ids: Array)
 
 var t
 var client
@@ -58,11 +60,16 @@ func _new_host():
 	if resolver != null:
 		h.resolver = resolver
 	h.log_line.connect(_relay_log)
+	h.bots_need_boards.connect(_relay_bots)
 	return h
 
 
 func _relay_log(s: String) -> void:
 	log_line.emit(s)
+
+
+func _relay_bots(r: int, ids: Array) -> void:
+	bots_need_boards.emit(r, ids)
 
 
 ## The transport is in the room: open the host when this player created it, then say hello
@@ -99,7 +106,7 @@ func on_members_changed() -> void:
 		return
 	var ids: Array = t.members()
 	for id in host.state.seats.keys():
-		if int(id) == t.self_id or int(id) in ids:
+		if int(id) == t.self_id or int(id) in ids or int(id) < 0:   # < 0 = a bot seat (LobbyState.is_bot): never a member
 			continue
 		if host.state.seats[id].status != "left" and bool(host.state.seats[id].get("connected", true)):
 			host.peer_disconnected(int(id))
@@ -159,6 +166,7 @@ func on_host_changed(old_id: int, new_id: int) -> void:
 			if resolver != null:
 				host.resolver = resolver
 			host.log_line.connect(_relay_log)
+			host.bots_need_boards.connect(_relay_bots)
 			host.adopt_guard(client.guard)
 			host_took_over.emit(host.epoch)
 		log_line.emit("took over from %d" % old_id)

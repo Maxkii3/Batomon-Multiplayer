@@ -37,7 +37,11 @@ const DEFAULT_SETTINGS := {
 	"free_trainers": false,     # 0.6.9: true = every player picks any trainer (whole roster), false = the game's 3 offers
 	"banned_trainers": [],      # 0.7.0: trainer ids nobody may pick (trainer_ban.gd); never edited in place, always replaced
 	"banned_species": [],       # species ids no shop roll may give (species_ban.gd); never edited in place, always replaced
+	"banned_trinkets": [],      # trinket ids no gift / event / battle reward may give (content_ban.gd); always replaced
+	"banned_items": [],         # item ids the shop's item slot never rolls (content_ban.gd); always replaced
+	"day_limit": 0,             # 0 = play until one is left; N = the match ends after Day N (most lives, then wins)
 	"second_chance": true,      # the game's Second Chance: the first time at 0 lives -> 1 life + a buff
+	"bot_level": "auto",        # ghost bots (bot_ghosts.gd): "auto" = the game's ranked pick for the host, else a rank tier
 }
 
 var settings: Dictionary = DEFAULT_SETTINGS.duplicate()
@@ -60,6 +64,52 @@ func add_player(id: int, name: String) -> bool:
 		"status": ALIVE, "out_round": 0, "ready": false, "at_shop": 0, "connected": true, "token_hash": "",
 		"second_chance": false, "role": role}
 	return true
+
+
+## Ghost bots: player seats with no member behind them. Negative ids never clash with a Steam / test id
+## and need no seat lookup (pairing, transports). The host plays them (match_host.bot_board).
+static func is_bot(id) -> bool:
+	return int(id) < 0
+
+
+## Lobby only: a bot takes a free player seat (Ready at once). -> its id, 0 = no free player seat.
+## `level` = this bot's own ghost level for the whole match ("" = the room's current pick, settings.bot_level).
+func add_bot(level := "") -> int:
+	if phase != "lobby" or players().size() >= int(settings.max_players) or seats.size() >= member_limit(settings):
+		return 0
+	var id := -1
+	while seats.has(id):
+		id -= 1
+	add_player(id, "Bot %d" % -id)
+	seats[id].ready = true
+	seats[id]["bot"] = true
+	seats[id]["bot_level"] = level if level != "" else str(settings.get("bot_level", "auto"))
+	return id
+
+
+## A bot seat's own ghost level (older rooms without one: the room's pick).
+func bot_level_of(id) -> String:
+	return str(seats.get(id, {}).get("bot_level", settings.get("bot_level", "auto")))
+
+
+## A bot's seat name carries its own ghost level, so every list shows it: "Bot 1 (Silver)", "Bot 2 (Master)",
+## on Auto the host's own rank "Bot 3 (Auto: Diamond)". Lobby only (a running match keeps its names).
+## True = a name changed.
+func label_bots(auto_tier := "") -> bool:
+	if phase != "lobby":
+		return false
+	var changed := false
+	for id in seats:
+		if is_bot(id):
+			var level := bot_level_of(id)
+			var tag := level.capitalize()
+			if level == "auto":
+				tag = "Auto: %s" % auto_tier.capitalize() if auto_tier != "" else "Auto"
+			var want := "Bot %d (%s)" % [-int(id), tag]
+			if str(seats[id].name) != want:
+				seats[id].name = want
+				changed = true
+	return changed
 
 
 ## Steam lobby member limit for a room: every player seat + every spectator seat (F1, 0.6.7: it used to be
@@ -251,15 +301,26 @@ static func on_second_chance(seat: Dictionary) -> bool:
 	return bool(seat.get("second_chance", false)) and str(seat.get("status", ALIVE)) == ALIVE
 
 
+## Over at one survivor (bots too: when only bots are left they fight on to the last one).
 func is_over() -> bool:
 	return phase != "lobby" and alive_ids().size() <= 1
 
 
-## Sole survivor, or everyone who went out in the last round together.
+## The Day limit was played out (the host ends the match after this round's battles).
+func day_limit_reached() -> bool:
+	var limit := int(settings.get("day_limit", 0))
+	return limit > 0 and round_n >= limit
+
+
+## Sole survivor (a Day limit: the alive players with the most lives, then wins), or everyone who went out in
+## the last round together.
 func winners() -> Array:
 	var alive := alive_ids()
 	if not alive.is_empty():
-		return alive
+		var best := [-1, -1]
+		for id in alive:
+			best = maxv_pair(best, [int(seats[id].lives), int(seats[id].wins)])
+		return alive.filter(func(id): return [int(seats[id].lives), int(seats[id].wins)] == best)
 	var last := 0
 	for id in seats:
 		last = maxi(last, int(seats[id].out_round))
@@ -302,3 +363,7 @@ static func from_dict(d: Dictionary):
 	s.lobby_seed = int(d.get("lobby_seed", 0))
 	s.rev = int(d.get("rev", 0))
 	return s
+
+
+static func maxv_pair(a: Array, b: Array) -> Array:
+	return b if b > a else a

@@ -159,6 +159,9 @@ func rendered_sig() -> String:
 	return board_sig(team, bench)
 
 
+var _bots_only_seen := 0               # the last round the "Only bots are left" line was logged
+
+
 ## Every frame from the glue: start / follow / stop.
 func update() -> void:
 	var c = client if client != null else (bm.client if bm != null else null)
@@ -195,9 +198,22 @@ func update() -> void:
 		if bm != null and bm.font != null:
 			_wait_label.add_theme_font_override("font", bm.font)
 		var nm: String = str(c.state.seats.get(id, {}).get("name", "")) if id != 0 else ""
-		_wait_label.text = ("Loading %s's shop..." if loading else "Waiting for %s's screen...") % nm \
-			if nm != "" else "Waiting for the match..."
+		var alive: Array = c.state.alive_ids()
+		if c.spectate_targets().is_empty() and not alive.is_empty() and alive.all(func(x): return int(x) < 0):
+			_wait_label.text = "Only bots are left: they fight on to the last one (round %d)" % int(c.state.round_n)
+			if _bots_only_seen != int(c.state.round_n):
+				_bots_only_seen = int(c.state.round_n)
+				print("BatoMulti: only bots left, round %d: the screen says they fight on" % _bots_only_seen)
+		else:
+			_wait_label.text = ("Loading %s's shop..." if loading else "Waiting for %s's screen...") % nm \
+				if nm != "" else "Waiting for the match..."
 	if key == shown_key:
+		return
+	if d.is_empty():                                          # nobody left to show (only bots alive): no empty shop
+		_free_scene()
+		shown_id = id
+		shown_key = key
+		live = false
 		return
 	if id != shown_id:
 		switches += 1

@@ -15,7 +15,7 @@ extends Node
 ## "Multiplayer" main-menu button + lobby modal, the leaderboard, the spectator view, and the game
 ## glue used by the RunManager layer (run_manager_multi.gd). Design: doc/architecture.md.
 
-const VERSION := "0.7.3"
+const VERSION := "0.7.4"
 ## License directive (operator 2026-10-06): printed at boot and verified with every core script by
 ## integrity.gd (SHA-256 manifest, tools\gen_integrity.ps1). Empty, altered or a modified script ->
 ## BatoMulti disables itself and the game runs vanilla.
@@ -58,8 +58,10 @@ const TrainerSelectMulti := preload("res://batomulti/trainer_select_multi.gd")
 const TrainerBan := preload("res://batomulti/trainer_ban.gd")
 const ChatWindow := preload("res://batomulti/chat_window.gd")
 const RedCoinMulti := preload("res://batomulti/red_coin_multi.gd")
+const BotGhosts := preload("res://batomulti/bot_ghosts.gd")
 const Tier4 := preload("res://batomulti/tier4.gd")
 const SpeciesBan := preload("res://batomulti/species_ban.gd")
+const ContentBan := preload("res://batomulti/content_ban.gd")
 const ShopManagerMulti := preload("res://batomulti/shop_manager_multi.gd")
 const LifeCountMulti := preload("res://batomulti/life_count_multi.gd")
 const TRAINER_SELECT_STATE := "res://game/states/trainer_select_state.gd"
@@ -651,6 +653,7 @@ func use_transport(t, kind := "loopback") -> void:
 	if t.get_parent() == null:
 		add_child(t)
 	session = MatchSession.new(t, "", VERSION, game_version())
+	session.bots_need_boards.connect(_fetch_bot_boards)
 	_wire_client()
 	t.room_ready.connect(_on_room_ready)
 	t.room_failed.connect(_on_room_failed)
@@ -1473,6 +1476,36 @@ func list_rooms(filters: Dictionary) -> void:
 		transport.list_rooms(f)
 
 
+## Host only, lobby: a ghost bot takes a free player seat (bot_ghosts.gd gives it a board every round).
+func add_bot() -> bool:
+	if host == null or host.add_bot() == 0:
+		_status("No free player seat for a bot (raise Max players).", true)
+		return false
+	_refresh()
+	return true
+
+
+var bot_ghosts = BotGhosts.new()
+
+
+## The host's shop opened with bots alive: one ghost per bot from the game's opponent bundles, handed to
+## whoever is host when it arrives (the round may be over by then: match_host ignores a stale board).
+func _fetch_bot_boards(r: int, ids: Array) -> void:
+	if host == null:
+		return
+	var st = host.state
+	var room_set := str(st.settings.get("set_id", ""))
+	var sets: Array = GameDatabase.get_picker_sets().map(func(sd): return str(sd.id))
+	for id in ids:
+		var level: String = st.bot_level_of(id)            # each bot keeps the level it was added with
+		var t0 := Time.get_ticks_msec()
+		var board: Dictionary = await bot_ghosts.board_for(level, BotGhosts.set_for(room_set, int(id), r, sets), r, int(st.lobby_seed))
+		print("BatoMulti bots: %s round %d level %s -> %s (%d units, %s, %d ms)" % [str(st.seats.get(id, {}).get("name", id)), r, level,
+			str(board.get("display_name", "-")), board.get("team", []).filter(func(m): return m != null).size(), str(board.get("set_id", "")), Time.get_ticks_msec() - t0])
+		if host != null:
+			host.bot_board(int(id), r, board)
+
+
 ## Host only: `id` is out of the room for good (lobby or match).
 func kick(id: int) -> bool:
 	if host == null or not host.kick(id):
@@ -1795,6 +1828,40 @@ func banned_species() -> Array:
 	return SpeciesBan.banned_of(client.state.settings) if client != null and lobby_run_live() else []
 
 
+## Trinket / item bans (content_ban.gd): while this game is in a room match (playing, watching, or the host
+## settling battles) the game's own lists every gift, event, battle grant and shop item roll draws from
+## (GameDatabase.trinkets_db / items_db) leave the room's banned ones out; outside a match they are whole
+## again. Lookups by id use the game's maps, so held / loaded trinkets and items are never lost.
+var _db_whole := {}            # "trinkets_db" / "items_db" -> the game's full list (while filtered)
+var _db_sig := ""
+
+
+func sync_db_bans() -> void:
+	var on: bool = client != null and client.in_match()
+	var bans := {"trinkets_db": ContentBan.banned_kind(client.state.settings, "trinket") if on else [],
+		"items_db": ContentBan.banned_kind(client.state.settings, "item") if on else []}
+	var sig := str(bans)
+	if sig == _db_sig:
+		return
+	_db_sig = sig
+	for key in bans:
+		if not _db_whole.has(key):
+			_db_whole[key] = GameDatabase.get(key)
+		var whole: Array = _db_whole[key]
+		var list: Array = bans[key]
+		if list.is_empty():
+			GameDatabase.set(key, whole)
+			_db_whole.erase(key)
+			continue
+		var kept = whole.duplicate()                     # same typed array as the game's
+		kept.clear()
+		for e in whole:
+			if not str(e.id) in list:
+				kept.append(e)
+		GameDatabase.set(key, kept)
+	print("BatoMulti: banned in this match: trinkets %s, items %s" % [bans.trinkets_db, bans.items_db])
+
+
 ## Random 3 with bans, before the game's screen enters: its 3 offers (the run's pending offers, which the
 ## game shows as they are) drawn from the unbanned trainers. Offers already pending (a reload) stay unless
 ## one of them is banned.
@@ -1981,6 +2048,12 @@ func _process(_delta: float) -> void:
 			_whats_new_shot = ""
 	if session != null:
 		session.tick(now)
+	sync_db_bans()
+	if host != null:
+		var um = get_node_or_null("/root/UserManager")
+		host.set_auto_tier(str(um.data.rank_tier) if um != null and um.get("data") != null else "")   # Auto bots' label
+	if not bot_ghosts.downloaded.is_empty() and not (client != null and client.in_match()):
+		bot_ghosts.cleanup()                       # the bots' extra ghost files go when the match ends (retried while one still downloads)
 	_cancel_button_tick()
 	if board_ui != null and board_ui.client != null:
 		board_ui.visible = board_ui.client.in_match() or board_ui.client.phase == "over"

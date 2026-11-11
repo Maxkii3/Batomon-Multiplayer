@@ -745,9 +745,9 @@ func watch_loading() -> bool:
 	return phase == "spectating" and spectate_target != 0 and shop_view_of(spectate_target).is_empty() \
 		and now - _watch_at < LOADING_SECONDS
 
-## Players a spectator can watch: everyone still alive, in seat order.
+## Players a spectator can watch: everyone still alive, in seat order (bots have no shop to watch).
 func spectate_targets() -> Array:
-	var out: Array = state.alive_ids()
+	var out: Array = state.alive_ids().filter(func(id): return int(id) >= 0)
 	out.erase(t.self_id if t != null else 0)
 	return out
 

@@ -31,6 +31,13 @@ const UiTheme := preload("res://batomulti/ui_theme.gd")
 const TrainerBan := preload("res://batomulti/trainer_ban.gd")
 const SpeciesBan := preload("res://batomulti/species_ban.gd")
 const ChatWindow := preload("res://batomulti/chat_window.gd")
+const BotGhosts := preload("res://batomulti/bot_ghosts.gd")
+const ContentBan := preload("res://batomulti/content_ban.gd")
+## Host settings categories (one shown at a time: the panel must fit 640x360).
+const CATEGORIES := ["Match", "Players & Bots", "Content & Bans"]
+const CATEGORY_TIPS := ["Shop timer, lives, tie rule, Day limit, battle speed, events",
+	"Room size, spectator seats, bots and their ghost level", "Region, trainer pick and the ban lists (trainers, Batomon, trinkets, items)"]
+const MAX_DAY_LIMIT := 999
 const SPEEDS := [1.0, 2.0, 4.0, 6.0, 8.0]   # host battle speed choices (every client plays battles at it)
 const COPIED_SECONDS := 1.5
 const COL_CODE := UiTheme.YELLOW           # the room code (with the game's dark outline)
@@ -67,6 +74,17 @@ var _room_edit: LineEdit             # the code "Create room" uses (prefilled wi
 var _minutes: SpinBox
 var _lives: SpinBox
 var _tie: OptionButton
+var add_bot_btn: Button            # host, lobby: a ghost bot takes a free player seat
+var bot_level: OptionButton        # the bots' ghost level (BotGhosts.LEVELS)
+var day_limit: SpinBox             # the room's Day limit, typed by the host (0 = none)
+var day_limit_note: Label          # "No limit" / "Days" beside it
+var category_buttons: Array = []   # [Match, Players & Bots, Content & Bans]
+var category_boxes: Array = []     # their rows (VBoxContainer each)
+var category := 0
+var content_ban_btns := {}         # "trinket" / "item" -> its Ban button
+var content_ban_labels := {}       # "trinket" / "item" -> "None" / "(n) Banned"
+var content_ban_windows := {}      # "trinket" / "item" -> its window (built on first open)
+var _content_bans := {"trinket": [], "item": []}   # the room's banned trinket / item ids
 var max_players_spin: SpinBox      # room size (0.6.7): players 2..250 and spectators, together <= Steam's 250
 var max_specs_spin: SpinBox
 var speed_buttons: Array = []      # one Button per SPEEDS entry (x1 ... x8); the lit one is the room's speed
@@ -334,7 +352,25 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	pw_edit.tooltip_text = "Empty = anyone can join. With a password the room shows a lock in the browser."
 	_create_row.add_child(pw_edit)
 	vb.add_child(_create_row)
-	vb.add_child(_label("Host settings", "BmSection"))
+	# Host settings in three categories (one shown at a time; guests browse them read-only)
+	var cat_row := HBoxContainer.new()
+	cat_row.add_theme_constant_override("separation", 3)
+	cat_row.add_child(_label("Host settings", "BmSection"))
+	for i in CATEGORIES.size():
+		var cb := _button(CATEGORIES[i], func(): show_category(i))
+		cb.tooltip_text = CATEGORY_TIPS[i]
+		category_buttons.append(cb)
+		cat_row.add_child(cb)
+	vb.add_child(cat_row)
+	for i in CATEGORIES.size():
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 3)
+		category_boxes.append(box)
+		vb.add_child(box)
+	var match_box: VBoxContainer = category_boxes[0]
+	var people_box: VBoxContainer = category_boxes[1]
+	var content_box: VBoxContainer = category_boxes[2]
+	# -- Match: time, lives, tie rule, Day limit, battle speed, events
 	var host_row := HBoxContainer.new()
 	host_row.add_child(_label("Shop timer (min)", ""))
 	_minutes = _spin(0.5, 10.0, 0.5, 2.0)
@@ -343,7 +379,7 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_lives = _spin(1, MAX_LIVES, 1, 10)
 	_lives.tooltip_text = "Starting lives of every player (the game's own is 10; more are shown as 10 hearts + the rest)"
 	host_row.add_child(_lives)
-	vb.add_child(host_row)
+	match_box.add_child(host_row)
 	var rule_row := HBoxContainer.new()
 	rule_row.add_child(_label("On a tie", ""))
 	_tie = OptionButton.new()
@@ -351,17 +387,17 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 	_tie.add_item("nothing changes")
 	_tie.focus_mode = Control.FOCUS_NONE
 	rule_row.add_child(_tie)
-	vb.add_child(rule_row)
-	var size_row := HBoxContainer.new()
-	size_row.add_child(_label("Max players", ""))
-	max_players_spin = _spin(LobbyState.MIN_PLAYERS, LobbyState.STEAM_MEMBER_CAP, 1, LobbyState.DEFAULT_SETTINGS.max_players)
-	max_players_spin.tooltip_text = "Players in one match (up to %d with the spectators)" % LobbyState.STEAM_MEMBER_CAP
-	size_row.add_child(max_players_spin)
-	size_row.add_child(_label("  Spectators", ""))
-	max_specs_spin = _spin(0, LobbyState.STEAM_MEMBER_CAP - LobbyState.MIN_PLAYERS, 1, LobbyState.MAX_SPECTATORS)
-	max_specs_spin.tooltip_text = "Seats that only watch (players + spectators <= %d, Steam's lobby size)" % LobbyState.STEAM_MEMBER_CAP
-	size_row.add_child(max_specs_spin)
-	vb.add_child(size_row)
+	rule_row.add_child(_label("  Day limit", ""))
+	day_limit = _spin(0, MAX_DAY_LIMIT, 1, 0)
+	day_limit.tooltip_text = "Type the last Day (0 = no limit: play until one player is left). The match ends after that Day: most lives wins (then most wins)"
+	day_limit.value_changed.connect(func(_v):
+		_note_day_limit()
+		_push_settings())
+	rule_row.add_child(day_limit)
+	day_limit_note = _label("", "BmDim")
+	rule_row.add_child(day_limit_note)
+	_note_day_limit()
+	match_box.add_child(rule_row)
 	var speed_row := HBoxContainer.new()
 	speed_row.add_theme_constant_override("separation", 3)
 	speed_row.add_child(_label("Battle speed", ""))
@@ -371,33 +407,50 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		b.tooltip_text = "Every battle in the room plays at x%d" % int(SPEEDS[i])
 		speed_buttons.append(b)
 		speed_row.add_child(b)
-	vb.add_child(speed_row)
+	match_box.add_child(speed_row)
 	_style_speeds()
-	var trainer_row := HBoxContainer.new()
-	trainer_row.add_theme_constant_override("separation", 3)
-	trainer_row.add_child(_label("Trainers", ""))
-	for free in [false, true]:
-		var tb := _button("Free pick" if free else "Random 3", func(): _pick_trainers(free))
-		tb.tooltip_text = "Every player picks any trainer from the whole roster (3 per row, scroll down)" if free \
-			else "The game's usual 3 random trainers to choose from"
-		trainer_buttons.append(tb)
-		trainer_row.add_child(tb)
-	ban_btn = _button("Ban Trainer", func(): open_bans())
-	ban_btn.tooltip_text = "Trainers nobody may pick in this match (the host chooses; everyone can look)"
-	trainer_row.add_child(_label(" ", ""))
-	trainer_row.add_child(ban_btn)
-	ban_label = _label(TrainerBan.status_text(_bans), "BmDim")
-	ban_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	trainer_row.add_child(ban_label)
-	trainer_row.add_child(_label(" ", ""))
-	species_ban_btn = _button("Ban Batomon", func(): open_species_bans())
-	species_ban_btn.tooltip_text = "Units no shop roll gives in this match; events and drops still can (the host chooses; everyone can look)"
-	trainer_row.add_child(species_ban_btn)
-	species_ban_label = _label(SpeciesBan.status_text(_species_bans, _set_id), "BmDim")
-	species_ban_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	trainer_row.add_child(species_ban_label)
-	vb.add_child(trainer_row)
-	_style_trainers()
+	var event_row := HBoxContainer.new()
+	event_row.add_theme_constant_override("separation", 3)
+	event_row.add_child(_label("Events", ""))
+	for same in [true, false]:
+		var eb := _button("Same for all" if same else "Own luck", func(): _pick_events(same))
+		eb.tooltip_text = "Every player gets the same event on Day 3, 6 and 9, picked by the room" if same \
+			else "Each player's game picks its own events, like a solo run"
+		event_buttons.append(eb)
+		event_row.add_child(eb)
+	match_box.add_child(event_row)
+	_style_events()
+	# -- Players & Bots: room size, bots + their ghost level
+	var size_row := HBoxContainer.new()
+	size_row.add_child(_label("Max players", ""))
+	max_players_spin = _spin(LobbyState.MIN_PLAYERS, LobbyState.STEAM_MEMBER_CAP, 1, LobbyState.DEFAULT_SETTINGS.max_players)
+	max_players_spin.tooltip_text = "Players in one match (up to %d with the spectators)" % LobbyState.STEAM_MEMBER_CAP
+	size_row.add_child(max_players_spin)
+	size_row.add_child(_label("  Spectators", ""))
+	max_specs_spin = _spin(0, LobbyState.STEAM_MEMBER_CAP - LobbyState.MIN_PLAYERS, 1, LobbyState.MAX_SPECTATORS)
+	max_specs_spin.tooltip_text = "Seats that only watch (players + spectators <= %d, Steam's lobby size)" % LobbyState.STEAM_MEMBER_CAP
+	size_row.add_child(max_specs_spin)
+	people_box.add_child(size_row)
+	var bot_row := HBoxContainer.new()
+	bot_row.add_theme_constant_override("separation", 3)
+	bot_row.add_child(_label("Bots", ""))
+	add_bot_btn = _button("Add bot", func(): hub.add_bot())
+	add_bot_btn.tooltip_text = "A bot takes a free player seat. Every round it fights with a real player's board from the game's ranked ghosts (Kick removes it)"
+	bot_row.add_child(add_bot_btn)
+	bot_row.add_child(_label("  Ghost level", ""))
+	bot_level = OptionButton.new()
+	for n in BotGhosts.LEVEL_NAMES:
+		bot_level.add_item(n)
+	bot_level.focus_mode = Control.FOCUS_NONE
+	bot_level.tooltip_text = "The next bot's ghost level (each bot keeps its own): Auto = the game's ranked pick for the host's rank; a tier = only ghosts of that rank (Master = the hardest)"
+	bot_level.item_selected.connect(func(_i): _push_settings())
+	bot_row.add_child(bot_level)
+	people_box.add_child(bot_row)
+	var bot_note := _label("Pick a level, then Add bot: each bot keeps its own. Bots play real players' ranked ghosts, a new one every round.", "BmDim")
+	bot_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bot_note.custom_minimum_size = Vector2(280, 0)
+	people_box.add_child(bot_note)
+	# -- Content & Bans: region, trainer pick, the four ban lists
 	var region_row := HBoxContainer.new()
 	region_row.add_theme_constant_override("separation", 3)
 	region_row.add_child(_label("Region", ""))
@@ -414,15 +467,45 @@ func setup(p_hub, p_font: Font, p_size: int) -> void:
 		region_buttons.append(rb)
 		region_row.add_child(rb)
 	_style_regions()
-	region_row.add_child(_label("  Events", ""))                # same row as Region: the panel must fit 640x360 (BU8)
-	for same in [true, false]:
-		var eb := _button("Same for all" if same else "Own luck", func(): _pick_events(same))
-		eb.tooltip_text = "Every player gets the same event on Day 3, 6 and 9, picked by the room" if same \
-			else "Each player's game picks its own events, like a solo run"
-		event_buttons.append(eb)
-		region_row.add_child(eb)
-	vb.add_child(region_row)
-	_style_events()
+	content_box.add_child(region_row)
+	var trainer_row := HBoxContainer.new()
+	trainer_row.add_theme_constant_override("separation", 3)
+	trainer_row.add_child(_label("Trainers", ""))
+	for free in [false, true]:
+		var tb := _button("Free pick" if free else "Random 3", func(): _pick_trainers(free))
+		tb.tooltip_text = "Every player picks any trainer from the whole roster (3 per row, scroll down)" if free \
+			else "The game's usual 3 random trainers to choose from"
+		trainer_buttons.append(tb)
+		trainer_row.add_child(tb)
+	content_box.add_child(trainer_row)
+	_style_trainers()
+	var bans := GridContainer.new()                      # [button] status  [button] status, two per row
+	bans.columns = 5
+	bans.add_theme_constant_override("h_separation", 3)
+	bans.add_theme_constant_override("v_separation", 3)
+	ban_btn = _button("Ban Trainer", func(): open_bans())
+	ban_btn.tooltip_text = "Trainers nobody may pick in this match (the host chooses; everyone can look)"
+	ban_label = _label(TrainerBan.status_text(_bans), "BmDim")
+	species_ban_btn = _button("Ban Batomon", func(): open_species_bans())
+	species_ban_btn.tooltip_text = "Units no shop roll gives in this match; events and drops still can (the host chooses; everyone can look)"
+	species_ban_label = _label(SpeciesBan.status_text(_species_bans, _set_id), "BmDim")
+	for kind in ["trinket", "item"]:
+		var kb := _button(ContentBan.KINDS[kind].title, func(): open_content_bans(kind))
+		kb.tooltip_text = "Trinkets no gift, event or battle reward gives in this match (the host chooses; everyone can look)" if kind == "trinket" \
+			else "Items the shop's item slot never rolls in this match (the host chooses; everyone can look)"
+		content_ban_btns[kind] = kb
+		content_ban_labels[kind] = _label("None", "BmDim")
+	var cells := [ban_btn, ban_label, species_ban_btn, species_ban_label, content_ban_btns.trinket, content_ban_labels.trinket,
+		content_ban_btns.item, content_ban_labels.item]
+	for k in cells.size():
+		if k == 0 or k == 4:
+			bans.add_child(_label("Bans" if k == 0 else "", ""))
+		if cells[k] is Label:
+			cells[k].mouse_filter = Control.MOUSE_FILTER_PASS
+			cells[k].custom_minimum_size = Vector2(54, 0)
+		bans.add_child(cells[k])
+	content_box.add_child(bans)
+	show_category(0)
 	for c in [_minutes, _lives]:
 		c.value_changed.connect(func(_v): _push_settings())
 	for c in [max_players_spin, max_specs_spin]:
@@ -499,7 +582,9 @@ func settings() -> Dictionary:
 		"tie_rule": "both_win" if _tie.selected == 0 else "no_change",
 		"battle_speed": SPEEDS[clampi(_speed_i, 0, SPEEDS.size() - 1)], "free_trainers": _free_trainers, "set_id": _set_id,
 		"banned_trainers": _bans.duplicate(), "banned_species": _species_bans.duplicate(),
-		"sync_events": _sync_events,
+		"sync_events": _sync_events, "bot_level": BotGhosts.LEVELS[clampi(bot_level.selected, 0, BotGhosts.LEVELS.size() - 1)],
+		"banned_trinkets": _content_bans.trinket.duplicate(), "banned_items": _content_bans.item.duplicate(),
+		"day_limit": int(day_limit.value),
 		"max_players": int(max_players_spin.value), "max_spectators": int(max_specs_spin.value),
 		"room_name": RoomInfo.clean_name(name_edit.text), "password": pw_edit.text.strip_edges()}
 
@@ -530,6 +615,8 @@ func _pick_region(id: String) -> void:
 	_refresh_bans(true)
 	_species_bans = SpeciesBan.keep_playable(_species_bans, id)
 	_refresh_species_bans(true)
+	_content_bans.trinket = ContentBan.keep_kind(_content_bans.trinket, "trinket", id)
+	_refresh_content_bans(true)
 	_style_regions()
 	_push_settings()
 
@@ -611,6 +698,66 @@ func open_species_bans() -> void:
 	refresh()
 	species_ban_window.reset_size()
 	species_ban_window.position = ((get_viewport_rect().size - species_ban_window.size) * 0.5).floor()
+
+
+## "No limit" for 0, else "Days" (the spin box shows the number).
+func _note_day_limit() -> void:
+	day_limit_note.text = "No limit" if int(day_limit.value) == 0 else "Days"
+
+
+## One Host settings category on screen (the others keep their values, hidden).
+func show_category(i: int) -> void:
+	category = i
+	for k in category_boxes.size():
+		category_boxes[k].visible = k == i
+		category_buttons[k].theme_type_variation = "BmToggleOn" if k == i else "BmToggleOff"
+	if is_inside_tree():
+		reset_size.call_deferred()
+
+
+## The trinket / item ban window (content_ban.gd), built on first use, centred like the Batomon one.
+func open_content_bans(kind: String) -> void:
+	var w = content_ban_windows.get(kind)
+	if w == null:
+		w = ContentBan.new()
+		w.set_kind(kind)
+		w.top_level = true
+		w.visible = false
+		w.toggled.connect(func(id): _on_content_ban_toggled(kind, id))
+		w.clear_pressed.connect(func(): _set_content_bans(kind, []))
+		w.search.focus_entered.connect(_mute_game_keys.bind(true))
+		w.search.focus_exited.connect(_mute_game_keys.bind(false))
+		add_child(w)
+		content_ban_windows[kind] = w
+	w.visible = true
+	refresh()
+	w.reset_size()
+	w.position = ((get_viewport_rect().size - w.size) * 0.5).floor()
+
+
+func _on_content_ban_toggled(kind: String, id: String) -> void:
+	var after := ContentBan.toggle_kind(_content_bans[kind], id, kind, _set_id)
+	if after == _content_bans[kind]:
+		content_ban_windows[kind].say("At least %d of each rarity must stay" % int(ContentBan.KINDS[kind].min))
+		return
+	_set_content_bans(kind, after)
+
+
+func _set_content_bans(kind: String, bans: Array) -> void:
+	_content_bans[kind] = bans
+	_refresh_content_bans(true)
+	_push_settings()
+
+
+func _refresh_content_bans(editable: bool) -> void:
+	for kind in _content_bans:
+		var shown := ContentBan.shown_kind(_content_bans[kind], kind, _set_id)
+		var l: Label = content_ban_labels[kind]
+		l.text = ContentBan.status_kind(_content_bans[kind], kind, _set_id)
+		l.tooltip_text = "Banned: " + ", ".join(shown.map(func(id): return str(ContentBan.lookup(kind, str(id)).name))) if not shown.is_empty() else "Nothing banned"
+		var w = content_ban_windows.get(kind)
+		if w != null and w.visible:
+			w.show_bans(_set_id, _content_bans[kind], editable)
 
 
 ## Host only (the window is read-only otherwise): toggle, then the room gets it like every host setting.
@@ -754,6 +901,14 @@ func refresh() -> void:
 	for c in [_minutes, _lives]:
 		c.editable = (not in_room) or (is_host and lobby)
 	_tie.disabled = in_room and not (is_host and lobby)
+	bot_level.disabled = in_room and not (is_host and lobby)
+	day_limit.editable = not in_room or (is_host and lobby)
+	if in_room and not (is_host and lobby) and hub.client != null:
+		day_limit.set_value_no_signal(int(hub.client.state.settings.get("day_limit", 0)))   # guests see the host's choice
+	_note_day_limit()
+	if in_room and not (is_host and lobby) and hub.client != null:
+		bot_level.select(maxi(0, BotGhosts.LEVELS.find(str(hub.client.state.settings.get("bot_level", "auto")))))   # guests see the host's choice
+	add_bot_btn.disabled = not (is_host and lobby)
 	for c in [max_players_spin, max_specs_spin]:
 		c.editable = (not in_room) or (is_host and lobby)
 	if in_room and hub.client != null and hub.client.state.seats.size() > 0:
@@ -794,6 +949,10 @@ func refresh() -> void:
 	if speed_locked and hub.client != null:
 		_species_bans = SpeciesBan.banned_of(hub.client.state.settings)   # guests (and everyone in a match) see the room's list
 	_refresh_species_bans(not speed_locked)
+	if speed_locked and hub.client != null:
+		for kind in _content_bans:
+			_content_bans[kind] = ContentBan.banned_kind(hub.client.state.settings, kind)
+	_refresh_content_bans(not speed_locked)
 	var names: PackedStringArray = []
 	var specs: PackedStringArray = []
 	if hub.client != null:
@@ -875,16 +1034,18 @@ func _refresh_roster(in_room: bool, is_host: bool, lobby: bool) -> void:
 		if gone:
 			nm.add_theme_color_override("font_color", UiTheme.GREY)
 		var kickable: bool = is_host and id != me and kind != "left"
-		_fit(nm, SIDE_W - bar_w - (DOT_W + 2) - (ROLE_W + 2) - ((KICK_W + 2) if kickable else 0.0))
+		var bot: bool = LobbyState.is_bot(id)           # a bot has no role to switch: its name ("Bot 1 (Master)") takes that room
+		_fit(nm, SIDE_W - bar_w - (DOT_W + 2) - (0.0 if bot else ROLE_W + 2) - ((KICK_W + 2) if kickable else 0.0))
 		if KIND_WORD[kind] != "":
 			nm.tooltip_text = "%s - %s" % [nm.text, KIND_WORD[kind]]
 		row.add_child(nm)
 		roster_names[id] = nm
-		var can: bool = lobby and (id == me or is_host)
+		var can: bool = lobby and (id == me or is_host) and not LobbyState.is_bot(id)
 		var b := _button("Spectator" if spec else "Player", func(): hub.set_role(id, "player" if spec else "spectator"))
 		b.custom_minimum_size = Vector2(ROLE_W, 0)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.disabled = not can
+		b.visible = not bot
 		b.tooltip_text = ("Switch to " + ("Player" if spec else "Spectator")) if can else (
 			"Only the host can change another player's role." if lobby else "Roles are locked once the match starts.")
 		row.add_child(b)
