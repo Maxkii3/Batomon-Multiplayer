@@ -375,8 +375,9 @@ func _fight_from(b: Dictionary, r: int) -> Dictionary:
 	f["mine"] = mine
 	f["canonical"] = -2
 	if not f.board.is_empty() and not mine.is_empty():
-		var res: Dictionary = resolver.call(mine if f.side0 else f.board, f.board if f.side0 else mine, r, int(f.seed))
-		f.canonical = Canonical.winner_for(int(res.winner), f.side0)
+		var res = resolver.call(mine if f.side0 else f.board, f.board if f.side0 else mine, r, int(f.seed))
+		var w: int = int(res.winner) if res is Dictionary and res.has("winner") else Canonical.DRAW   # failed sim = the host's draw
+		f.canonical = Canonical.winner_for(w, f.side0)
 	return f
 
 

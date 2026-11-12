@@ -1,3 +1,31 @@
+# BatoMulti 0.7.6 — rooms with bots no longer get stuck after Battle!
+
+A bug-fix update (player report, thanks!): *"playing with 5 Gold bots, after pressing Battle the game thinks
+I'm still shopping; the timer ran out but stayed at 0:01, I had to exit the room."*
+
+**Updating from 0.6.2-0.7.5:** the main menu shows the update banner: **[Update Now]**, then
+**[Restart Now]**. Everyone in a room needs 0.7.6: 0.7.5 and 0.7.6 players can't share a room.
+Built and tested on Batomon Showdown **1.5.1**.
+
+## 🐞 Fixes
+
+- **Bots no longer hold the round after Battle!** A bot's ghost board comes from the game's ghost files or
+  servers. When that was slow (a ghost file still downloading, a slow server answer), the room waited for it
+  until the **whole shop timer** ran out, even after every player had pressed **Battle!**. With a long timer
+  (5 minutes) that looked like a stuck room. Now, once every player is locked in, a bot gets at most a few
+  more seconds; then it fights its last board (or a copy of a player's board on its first Day), the same
+  fallback a bot already used when no ghost was found.
+- **The shop timer no longer freezes at 0:01.** The leaderboard header stopped redrawing while you waited
+  after **Battle!**, so it showed **0:01** forever when time ran out. It now counts down to the end.
+- **A room no longer waits forever for a player stuck on an earlier screen.** If no player reached the next
+  shop (for example a game left on the searching popup after a round with no fight), the room waited
+  without end. It now opens the round after its usual 2-minute limit, like it already did when at least one
+  player was there; the late player joins with the time left.
+- **A battle that cannot be simulated counts as a draw** instead of stopping the round half-built on the
+  host and the players' games.
+
+---
+
 # BatoMulti 0.7.5 — Batomon Showdown 1.5.1 fix, Room Presets, badge count past 10
 
 An update for the Batomon Showdown **1.5.1** patch (2026-11-11), plus two community requests.

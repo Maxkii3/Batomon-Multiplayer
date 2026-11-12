@@ -23,6 +23,11 @@ const KEY := "seen"
 const WIDTH := 300.0
 ## Highlights per version (newest first in each list). A version without an entry shows no popup.
 const NOTES := {
+	"0.7.6": [
+		"Rooms with bots: after everyone pressed Battle!, a bot whose ghost is slow to arrive no longer keeps the round waiting until the timer runs out (player report: \"stuck at 0:01\"). It fights its last board instead.",
+		"The shop timer on the leaderboard no longer freezes at 0:01 while you wait for the round.",
+		"A room no longer stalls when a player's game is stuck on an earlier screen, or when a battle cannot be simulated (it counts as a draw).",
+	],
 	"0.7.5": [
 		"Updated for Batomon Showdown 1.5.1: Day 3 / 6 / 9 events are back in ranked and solo runs (0.7.4 lost them after the game patch).",
 		"Room Presets: save the host settings under a name, load them later, or Export them as a file a friend can Import.",

@@ -356,8 +356,8 @@ func _text(ci: CanvasItem, pos: Vector2, s: String, col: Color, width: float, al
 
 
 func _process(_delta: float) -> void:
-	if visible and client != null and (client.phase == "shop" or client.seconds_left() > 0.0):
-		refresh()               # countdown
+	if visible and client != null and (client.phase in ["shop", "ready_wait"] or client.seconds_left() > 0.0):
+		refresh()               # countdown (ready_wait too: it froze on "0:01" when time ran out after Battle!)
 
 
 ## The seat id under a point of the panel (0 = header / nothing); counts the scroll offset.

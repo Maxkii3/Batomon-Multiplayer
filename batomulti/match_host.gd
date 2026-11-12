@@ -92,6 +92,11 @@ var _info_last: Dictionary = {}
 var _info_at := -1000.0
 var _boards: Dictionary = {}      # id -> packed board dict for the current round
 var _bot_waived: Dictionary = {}  # bot id -> true: no ghost this round (fetch failed), it never holds the ready barrier
+## Every human is ready but a bot's ghost is still coming (a slow / hung download or server call): the
+## round waits this long, then the bot fights its last board (or a copy). Player report 0.7.5: 5 Gold bots
+## kept a 300 s shop open after Battle! until the timer ran out.
+const BOT_WAIT := 8.0
+var _humans_done_at := -1.0       # now when the last human locked in this round (-1 = someone still shopping)
 var auto_tier := ""                 # the host's rank tier (set_auto_tier): the label of a bot on Auto
 const CHAT_BURST := 5             # chat lines per member per CHAT_WINDOW s (more = dropped: no flood)
 const CHAT_WINDOW := 5.0
@@ -955,8 +960,10 @@ func _open_without_late() -> void:
 	if state.is_over():
 		_game_over()
 		return
-	if present == 0:
-		return
+	if present == 0 and late.is_empty():
+		return                                    # nobody connected (all dropped): their reconnect grace decides
+	# present 0 + late humans = every human is stuck on an earlier screen (e.g. a round with no fight left the
+	# game on its search popup, which only moves on when the next round opens): open it, never wait forever
 	stats.late_open += 1
 	_log("round %d opens without %s (still on another screen: they join with the time left)" % [state.round_n, ", ".join(late)])
 	var secs := _migrated_shop if _migrated_shop > 0.0 else float(state.settings.shop_seconds)
@@ -986,6 +993,7 @@ func _open_shop(seconds: float) -> void:
 	_forced_at = -1.0
 	_boards.clear()
 	_bot_waived.clear()
+	_humans_done_at = -1.0
 	_late_ids = []
 	for id in state.seats:
 		state.seats[id].ready = false
@@ -1062,11 +1070,25 @@ func _on_unready(from: int, r: int) -> void:
 func _check_all_ready() -> void:
 	if state.phase != "shop":
 		return
+	var bots_missing: Array = []
 	for id in state.alive_ids():
 		if _boards.has(id) or _bot_waived.has(id):
 			continue
+		if LobbyState.is_bot(id):
+			bots_missing.append(id)
+			continue
 		if state.is_connected_seat(id) or now - float(_dc_since.get(id, now)) < SHOP_DC_WAIT:
+			_humans_done_at = -1.0
 			return
+	if not bots_missing.is_empty():
+		if _humans_done_at < 0.0:
+			_humans_done_at = now
+		if now - _humans_done_at < BOT_WAIT:
+			return                                  # tick() calls again every frame
+		for id in bots_missing:
+			_bot_waived[id] = true
+			_bump("bot_board_timeout")
+		_log("round %d: no ghost yet for %d bot(s) after everyone was ready -> last board / copy" % [state.round_n, bots_missing.size()])
 	_resolve()
 
 
@@ -1146,7 +1168,7 @@ func _run_battles(body: Dictionary, count_byes: bool) -> void:
 			_fighting.append(int(id))           # a bot's battles are settled here: it never reports
 	_fighting.sort()
 	for p in body.pairs:
-		var r: Dictionary = resolver.call(dicts[int(p[0])], dicts[int(p[1])], state.round_n, int(p[2]))
+		var r: Dictionary = _battle(dicts[int(p[0])], dicts[int(p[1])], int(p[2]))
 		_pending.append([int(p[0]), int(p[1]), int(r.winner), 0])
 		_last_opp[int(p[0])] = int(p[1])
 		_last_opp[int(p[1])] = int(p[0])
@@ -1156,13 +1178,24 @@ func _run_battles(body: Dictionary, count_byes: bool) -> void:
 			continue
 		var a: int = mini(int(y[0]), int(y[1]))          # side 0 = lower id, like every pair
 		var c: int = maxi(int(y[0]), int(y[1]))
-		var r: Dictionary = resolver.call(dicts[a], dicts[c], state.round_n, int(y[2]))
+		var r: Dictionary = _battle(dicts[a], dicts[c], int(y[2]))
 		_pending.append([a, c, int(r.winner), int(y[0])])   # only the bye player's result counts
 		if count_byes:
 			_byes[int(y[0])] = int(_byes.get(int(y[0]), 0)) + 1
 	for id in _fighting.duplicate():
 		if not state.is_connected_seat(id):
 			_fighting.erase(id)                # a dropped player does not hold the result barrier
+
+
+## One canonical battle; a simulation that failed (a script error in the game's battle code returns null in
+## the release build) counts as a draw, so the round still starts instead of stopping half-built.
+func _battle(b0: Dictionary, b1: Dictionary, seed_n: int) -> Dictionary:
+	var r = resolver.call(b0, b1, state.round_n, seed_n)
+	if r is Dictionary and r.has("winner"):
+		return r
+	_bump("battle_sim_failed")
+	_log("round %d: a canonical battle failed -> draw" % state.round_n)
+	return {"winner": Canonical.DRAW}
 
 
 func _check_desync(from: int, b: Dictionary) -> void:
